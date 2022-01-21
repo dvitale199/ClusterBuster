@@ -1,6 +1,7 @@
 # imports
 import pandas as pd
 import numpy as np
+from sklearn.mixture import GaussianMixture
 
 def calculate_maf(gtype_df):
     '''
@@ -72,7 +73,8 @@ def read_report(reportfile, flag_maf, flag_gencall):
     # Smash everything together and get ready for plotting.
     temp_df = GType_transposed_df.merge(Theta_transposed_df, left_index=True, right_index=True)
     clusterbuster_df = temp_df.merge(R_transposed_df, left_index=True, right_index=True)
-
+    clusterbuster_out = clusterbuster_df.reset_index().rename(columns={'index':'IID'})
+    
     # get gentrain scores
     gtrain_scores_df = report_in.loc[:,['Name','GenTrain Score']]
     gtrain_scores_df.columns = ['snpid','gentrain_score']
@@ -87,13 +89,32 @@ def read_report(reportfile, flag_maf, flag_gencall):
 
 
     out_dict = {
-        'clusterbuster_df': clusterbuster_df,
+        'clusterbuster_df': clusterbuster_out,
         'flagged_snps': flag_df, 
     }
 
     return out_dict
 
 
+def gtype_gmm(snp_theta_r_df, n_components):
+    
+    X = snp_theta_r_df[[theta_col, r_col]].copy()
+
+    gmm = GaussianMixture(
+        n_components=n_components,
+        covariance_type="diag",
+        random_state = 10).fit(X)
+
+    labels = gmm.predict(X)
+
+    out_dict = {
+        'gmm': gmm,
+        'X': X,
+        'y_pred': labels
+    }
+
+    # X.loc[:,'predicted_label'] = labels
+    return out_dict
 
 
 
