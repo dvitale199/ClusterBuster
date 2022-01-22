@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 from sklearn.mixture import GaussianMixture
+import streamlit as st
 
 def calculate_maf(gtype_df):
     '''
@@ -28,8 +29,8 @@ def calculate_maf(gtype_df):
 
     return maf_out
 
-
-def read_report(reportfile, flag_maf, flag_gencall):
+# @st.cache()
+def parse_report(report_in, flag_maf, flag_gentrain):
 
     ''' 
     in: 
@@ -41,7 +42,7 @@ def read_report(reportfile, flag_maf, flag_gencall):
             }
             
     '''
-    report_in = pd.read_csv(reportfile, engine='c', dtype={'Chr':str, 'position':int})
+    
     report = report_in.drop(columns=['Index', 'Address', 'Chr', 'Position', 'GenTrain Score', 'Frac A', 'Frac C', 'Frac G', 'Frac T'])
 
     # Chop out to GType, Score and Theta dataframes.
@@ -85,7 +86,7 @@ def read_report(reportfile, flag_maf, flag_gencall):
     maf_scores_df = calculate_maf(gtype_to_maf)
     flag_df = maf_scores_df.merge(gtrain_scores_df, how='inner', on='snpid')
     flag_df.loc[:,'maf_flag'] = np.where(flag_df.maf<flag_maf, True, False)
-    flag_df.loc[:,'gencall_flag'] = np.where(flag_df.gentrain_score<flag_gencall, True, False)
+    flag_df.loc[:,'gentrain_flag'] = np.where(flag_df.gentrain_score<flag_gentrain, True, False)
 
 
     out_dict = {
@@ -95,26 +96,29 @@ def read_report(reportfile, flag_maf, flag_gencall):
 
     return out_dict
 
-
-def gtype_gmm(snp_theta_r_df, n_components):
+#### MAY WANT TO GRIDSEARCH OVER COVARIANCE TYPE!!!!
+# def gtype_gmm(snp_theta_r_df, n_components, snp):
     
-    X = snp_theta_r_df[[theta_col, r_col]].copy()
+#     X = snp_theta_r_df[[theta_col, r_col]].copy()
 
-    gmm = GaussianMixture(
-        n_components=n_components,
-        covariance_type="diag",
-        random_state = 10).fit(X)
+#     gmm = GaussianMixture(
+#         n_components=n_components,
+#         covariance_type="diag",
+#         random_state = 10).fit(X)
 
-    labels = gmm.predict(X)
+#     labels = gmm.predict(X)
 
-    out_dict = {
-        'gmm': gmm,
-        'X': X,
-        'y_pred': labels
-    }
+#     out_dict = {
+#         'gmm': gmm,
+#         'X': X,
+#         'y_pred': labels
+#     }
 
-    # X.loc[:,'predicted_label'] = labels
-    return out_dict
+#     # X.loc[:,'predicted_label'] = labels
+#     return out_dict
+
+
+
 
 
 
