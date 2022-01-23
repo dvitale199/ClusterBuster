@@ -7,7 +7,7 @@ import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
 
-from clusterbuster import parse_report, view_table_slice
+from clusterbuster import parse_report, view_table_slice, plot_clusters
 
 st.write("""
 # ClusterBuster
@@ -125,23 +125,29 @@ if 'report' in st.session_state.keys():
     if selected_snp:
         st.header('Selected SNP')
         st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
+
+
+        geno_col = selected_snp + ".GType"
+        theta_col = selected_snp + ".Theta"
+        r_col = selected_snp + ".R"
+
+        gtypes = list(cb_df[geno_col].unique())
+
+        snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+        snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{selected_snp}.', '', regex=False)
+
+        df = snp_for_plot_df.copy()
+        x_col, y_col = 'Theta', 'R'
+        gtypes_list = list(df.GType.unique())
+
+        df = snp_for_plot_df.copy()
+        x_col, y_col = 'Theta', 'R'
+        gtypes_list = (df.GType.unique())
+        st.plotly_chart(plot_clusters(df,x_col,y_col,snpid=selected_snp))
+
     else:
         st.warning('No SNPs Selected')
-
-   
-    # st.header('Flagged SNPs')
-    # st.table(snps_df.loc[snps_df.snpid.isin(flagged_list)])
-
-        # selected_snp = st.selectbox("Select Flagged SNP to Plot", options=flagged_list)
-
-
-
-
-    # expander2 = st.sidebar.expander("Search SNP", expanded=False)
-    # with expander2:
-    #     selected_snp = st.selectbox("Search by keywords for snpid, chr:pos, or chr:pos1-pos2", options=snps_list)
-    # st.header('Selected SNP')
-    # st.table(snps_df.loc[snps_df.snpid == selected_snp])
+    
 
 
 

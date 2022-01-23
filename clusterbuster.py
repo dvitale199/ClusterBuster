@@ -4,6 +4,9 @@ import numpy as np
 from sklearn.mixture import GaussianMixture
 import streamlit as st
 
+import plotly.express as px
+import plotly.graph_objects as go
+
 def calculate_maf(gtype_df):
     '''
     in:
@@ -124,7 +127,42 @@ def view_table_slice(df_in, max_rows=20, **st_dataframe_kwargs):
 
 
 
+def plot_clusters(df, x_col, y_col, snpid):
 
+    d3 = px.colors.qualitative.D3
+
+    cmap = {
+        'AA': d3[0],
+        'AB': d3[1],
+        'BA': d3[1],
+        'BB': d3[2],
+        'NC': d3[3]
+    }
+
+    gtypes_list = (df.GType.unique())
+
+    fig = go.Figure()
+
+    for gtype in gtypes_list:
+        df_ = df.loc[df.GType==gtype]
+        x = df_.loc[:,x_col]
+        y = df_.loc[:,y_col]
+        IID = df_.loc[:,'IID']
+
+        fig.add_trace(
+            go.Scatter(
+                x=x, y=y, 
+                mode="markers",
+                name=gtype,
+                hovertemplate="Genotype=%s<br>Theta=%%{x}<br>R=%%{y}<extra></extra>"% gtype
+                ))
+
+        fig.update_layout(title_text=f'{snpid} Cluster Plot')
+        fig.update_layout(legend_title_text = 'Genotype')
+        fig.update_xaxes(title_text=x_col)
+        fig.update_yaxes(title_text=y_col)
+    
+    return fig
 
 
 
