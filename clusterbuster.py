@@ -77,8 +77,9 @@ def parse_report(report_in, flag_maf, flag_gentrain):
     clusterbuster_out = clusterbuster_df.reset_index().rename(columns={'index':'IID'})
     
     # get gentrain scores
-    gtrain_scores_df = report_in.loc[:,['Name','GenTrain Score']]
-    gtrain_scores_df.columns = ['snpid','gentrain_score']
+    
+    gtrain_scores_df = report_in.loc[:,['Name', 'Chr', 'Position','GenTrain Score','Frac A', 'Frac C', 'Frac G', 'Frac T']]
+    gtrain_scores_df.columns = ['snpid','Chr','Position','gentrain_score','Frac_A','Frac_C','Frac_G','Frac_T']
     # calculate maf
     gtype_df = Name_GType_df.copy()
     gtype_df.loc[:,'snpid'] = gtype_df.loc[:,'idx'].str.replace(".GType", "", regex=False)
@@ -95,6 +96,38 @@ def parse_report(report_in, flag_maf, flag_gentrain):
     }
 
     return out_dict
+
+def view_table_slice(df_in, max_rows=20, **st_dataframe_kwargs):
+    """Display a subset of a DataFrame or Numpy Array to speed up app renders.
+    
+    Parameters
+    ----------
+    df : DataFrame | ndarray
+        The DataFrame or NumpyArray to render.
+    max_rows : int
+        The number of rows to display.
+    st_dataframe_kwargs : Dict[Any, Any]
+        Keyword arguments to the st.dataframe method.
+    """
+    df = df_in.drop(columns='index').copy()
+
+    n_rows = len(df)
+    if n_rows <= max_rows:
+        st.write(df)
+    else:
+        start = st.slider('Start row', 0, n_rows - max_rows)
+        end = start + max_rows
+        df = df[start:end]
+
+        st.table(df, **st_dataframe_kwargs)
+        st.text('Displaying rows %i to %i of %i.' % (start, end - 1, n_rows))
+
+
+
+
+
+
+
 
 #### MAY WANT TO GRIDSEARCH OVER COVARIANCE TYPE!!!!
 # def gtype_gmm(snp_theta_r_df, n_components, snp):

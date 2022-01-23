@@ -7,43 +7,12 @@ import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
 
-from ClusterBuster.clusterbuster import parse_report, calculate_maf
+from clusterbuster import parse_report, view_table_slice
 
 st.write("""
 # ClusterBuster
 This webapp investigates cluster quality for genotyped variants from the **NeuroBoosterArray**
 """)
-
-def display_df_slice(df, max_rows=20, **st_dataframe_kwargs):
-    """Display a subset of a DataFrame or Numpy Array to speed up app renders.
-    
-    Parameters
-    ----------
-    df : DataFrame | ndarray
-        The DataFrame or NumpyArray to render.
-    max_rows : int
-        The number of rows to display.
-    st_dataframe_kwargs : Dict[Any, Any]
-        Keyword arguments to the st.dataframe method.
-    """
-    n_rows = len(df)
-    if n_rows <= max_rows:
-        # As a special case, display small dataframe directly.
-        st.write(df)
-    else:
-        # Slice the DataFrame to display less information.
-        start_row = st.slider('Start row', 0, n_rows - max_rows)
-        end_row = start_row + max_rows
-        df = df[start_row:end_row]
-
-        # Reindex Numpy arrays to make them more understadable.
-        if type(df) == np.ndarray:
-            df = pd.DataFrame(df)
-            df.index = range(start_row,end_row)
-
-        # Display everything.
-        st.dataframe(df, **st_dataframe_kwargs)
-        st.text('Displaying rows %i to %i of %i.' % (start_row, end_row - 1, n_rows))
 
 
 # step 1: accept user input for report file
@@ -51,7 +20,7 @@ def display_df_slice(df, max_rows=20, **st_dataframe_kwargs):
 expander1 = st.sidebar.expander("Click Here to Upload a GenomeStudio SNP Report", expanded=False)
 with expander1:
     st.subheader('Import GenomeStudio SNP Report')
-    reportfile = st.file_uploader('')
+    reportfile = st.file_uploader('Report File Upload')
 
     if reportfile:
 
@@ -87,30 +56,79 @@ if 'report' in st.session_state.keys():
 
     # flagged dfs
     total_flagged = snps_df[snps_df.maf_flag | snps_df.gentrain_flag].reset_index()
+    both_flagged = snps_df[snps_df.maf_flag & snps_df.gentrain_flag].reset_index()
     maf_flagged = snps_df.loc[snps_df.maf_flag].reset_index()
     gentrain_flagged = snps_df.loc[snps_df.gentrain_flag].reset_index()
-    snps_list = snps_df.snpid.unique()
-    flagged_list = total_flagged.snpid.unique()
-    all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
 
-    expander2 = st.sidebar.expander("View Flagged SNPs", expanded=False)
+    snps_list = list(snps_df.snpid.unique())
+
+    flagged_list = list(total_flagged.snpid.unique())
+    # all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
+
+
+    expander2 = st.sidebar.expander("Filter Flagged SNPs", expanded=False)
     with expander2:
         
         maf_flagged_checkbox = st.checkbox('MAF', value=False)
         gentrain_flagged_checkbox = st.checkbox('GenTrain', value=False)
+        all_flagged_checkbox = st.checkbox('All', value=False)
+    
 
-    if maf_flagged_checkbox:
+    if maf_flagged_checkbox and not gentrain_flagged_checkbox:
         st.header('Flagged SNPs')
-        # st.table(maf_flagged)
-        display_df_slice(maf_flagged)
-    if gentrain_flagged_checkbox:
+        view_table_slice(maf_flagged)
+        all_flagged_checkbox = False
+
+    if gentrain_flagged_checkbox and not maf_flagged_checkbox:
         st.header('Flagged SNPs')
-        display_df_slice(gentrain_flagged)
+        view_table_slice(gentrain_flagged)
+        all_flagged_checkbox = False
+
     if maf_flagged_checkbox and gentrain_flagged_checkbox:
         st.header('Flagged SNPs')
-        display_df_slice(all_flagged)
+        view_table_slice(both_flagged)
+        all_flagged_checkbox = False
 
+    if all_flagged_checkbox:
+        st.header('Flagged SNPs')
+        view_table_slice(total_flagged)
+        gentrain_flagged_checkbox = False
+        maf_flagged_checkbox = False
 
+    expander3 = st.sidebar.expander("Search SNPs", expanded=False)
+
+    with expander3:
+
+        st.write('Upload a list of Variants:')
+        input_snp_file = st.file_uploader('Variant List Upload')
+        if input_snp_file:
+            input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
+            input_snp_list = list(input_snp_df.loc[:,'snp'])
+        ##### Add try except to check file format
+        #### add check to see if anything in the input list is not in snp data
+
+        else:
+            input_snp_list = None
+
+        if input_snp_list:
+            selected_snp = st.selectbox(
+            "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
+            options=[''] + input_snp_list,
+            format_func=lambda x: 'Select an option' if x == '' else x)
+        else:
+            # append empty string to front of snp list. if empty string chosen "select an option"
+            selected_snp = st.selectbox(
+                "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
+                options=[''] + snps_list,
+                format_func=lambda x: 'Select an option' if x == '' else x)
+
+    if selected_snp:
+        st.header('Selected SNP')
+        st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
+    else:
+        st.warning('No SNPs Selected')
+
+   
     # st.header('Flagged SNPs')
     # st.table(snps_df.loc[snps_df.snpid.isin(flagged_list)])
 
