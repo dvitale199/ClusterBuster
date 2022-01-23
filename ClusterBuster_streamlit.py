@@ -106,7 +106,6 @@ if 'report' in st.session_state.keys():
             input_snp_list = list(input_snp_df.loc[:,'snp'])
         ##### Add try except to check file format
         #### add check to see if anything in the input list is not in snp data
-
         else:
             input_snp_list = None
 
@@ -145,8 +144,15 @@ if 'report' in st.session_state.keys():
         gtypes_list = (df.GType.unique())
         st.plotly_chart(plot_clusters(df,x_col,y_col,snpid=selected_snp))
 
+        recluster = st.button('Recluster Selected Variant')
+
+        if recluster:
+            st.write('recluster!!!!!')
+
     else:
         st.warning('No SNPs Selected')
+
+        
     
 
 

@@ -127,7 +127,7 @@ def view_table_slice(df_in, max_rows=20, **st_dataframe_kwargs):
 
 
 
-def plot_clusters(df, x_col, y_col, snpid):
+def plot_clusters(df, x_col, y_col, gtype_col, symbol_col, snpid):
 
     d3 = px.colors.qualitative.D3
 
@@ -139,21 +139,31 @@ def plot_clusters(df, x_col, y_col, snpid):
         'NC': d3[3]
     }
 
-    gtypes_list = (df.GType.unique())
+    gtypes_list = (df[gtype_col].unique())
+
 
     fig = go.Figure()
 
     for gtype in gtypes_list:
-        df_ = df.loc[df.GType==gtype]
+        df_ = df.loc[df[gtype_col]==gtype]
         x = df_.loc[:,x_col]
         y = df_.loc[:,y_col]
-        IID = df_.loc[:,'IID']
+        symbol_ = df_[]
+        # symbol_dict = {'AA':'circle','AB':'circle','BB':'circle','NC':'x'}
+        # symbol = np.where(df_.loc[:,symbol_col=='NC','x','circle'])
+        if gtype == 'NC':
+            symbol='x'
+        else:
+            symbol='circle'
+        # symbol = df_.loc[:,symbol_col]
+        # IID = df_.loc[:,'IID']
 
         fig.add_trace(
             go.Scatter(
                 x=x, y=y, 
                 mode="markers",
                 name=gtype,
+                marker_symbol=symbol,
                 hovertemplate="Genotype=%s<br>Theta=%%{x}<br>R=%%{y}<extra></extra>"% gtype
                 ))
 
@@ -193,25 +203,25 @@ def plot_clusters(df, x_col, y_col, snpid):
 
 
 
-def flagged_variants_dropdown(snp_list):
-    pass
+# def flagged_variants_dropdown(snp_list):
+#     pass
 
 
 
-def search_variant():
-    pass
+# def search_variant():
+#     pass
 
-def variant_report():
-    pass
+# def variant_report():
+#     pass
 
-def recluster_variant():
-    pass
+# def recluster_variant():
+#     pass
 
-def export_cluster():
-    pass
+# def export_cluster():
+#     pass
 
-def export_final_report():
-    pass
+# def export_final_report():
+#     pass
 
 
 
