@@ -59,6 +59,7 @@ if 'report' in st.session_state.keys():
     both_flagged = snps_df[snps_df.maf_flag & snps_df.gentrain_flag].reset_index()
     maf_flagged = snps_df.loc[snps_df.maf_flag].reset_index()
     gentrain_flagged = snps_df.loc[snps_df.gentrain_flag].reset_index()
+    reclustered_df = pd.DataFrame()
 
     snps_list = list(snps_df.snpid.unique())
 
@@ -132,9 +133,9 @@ if 'report' in st.session_state.keys():
         snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
         snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{selected_snp}.', '', regex=False)
 
-        df = snp_for_plot_df.copy()
-        x_col, y_col = 'Theta', 'R'
-        gtypes_list = list(df.GType.unique())
+        # df = snp_for_plot_df.copy()
+        # x_col, y_col = 'Theta', 'R'
+        # gtypes_list = list(df.GType.unique())
 
         df = snp_for_plot_df.copy()
         x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
@@ -147,12 +148,12 @@ if 'report' in st.session_state.keys():
         n_components = len(gtypes_for_gmm)
 
         snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-
-        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
-        snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{selected_snp}.','', regex=False)
+        snp_for_gmm_df_temp.columns = snp_for_gmm_df_temp.columns.str.replace(f'{selected_snp}.','', regex=False)
+        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp['Theta'].isna() & ~snp_for_gmm_df_temp['R'].isna() & ~snp_for_gmm_df_temp['GType'].isna()].copy()
+        
 
         recluster = st.button('Recluster Selected Variant')
-        reclustered_df = pd.DataFrame()
+        
 
         if recluster:
 
@@ -160,6 +161,7 @@ if 'report' in st.session_state.keys():
 
             gmm_plot_df = gmm_out['X']
             gmm_plot_df.loc[:,'GType'] = gmm_out['y_pred']
+            gmm_plot_df.loc[:,'IID'] = gmm_out['IID']
             gmm = gmm_out['gmm']
 
             cluster_means = {gtype:gmm_plot_df.loc[gmm_plot_df.GType==gtype,'Theta'].mean() for gtype in gmm_plot_df.GType.unique()}
@@ -172,7 +174,7 @@ if 'report' in st.session_state.keys():
             gmm_plot_df.loc[:,'gtype_out'] = gmm_plot_df.loc[:,'GType'].replace(gmm_gtype_map)
             gmm_plot_df.loc[:,'original_gtype'] = snp_for_gmm_df.loc[:,'GType']
             gmm_plot_df.loc[:,'snpid'] = selected_snp
-            reclustered_df = reclustered_df.append(gmm_plot_df[['snpid','gtype_out']])
+            reclustered_df = reclustered_df.append(gmm_plot_df[['IID','snpid','gtype_out']])
 
             st.plotly_chart(plot_gmm(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', gmm=gmm, snpid=selected_snp, n_std=5))
 
@@ -180,67 +182,80 @@ if 'report' in st.session_state.keys():
         st.warning('Please Select a SNP')
     
 
-    # Generate output report
-    for snp in snps_list:
-        geno_col = snp + ".GType"
-        theta_col = snp + ".Theta"
-        r_col = snp + ".R"    
-
-        gtypes = list(cb_df[geno_col].unique())
-
-        snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-        snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{snp}.', '', regex=False)
-
-        df = snp_for_plot_df.copy()
-        x_col, y_col = 'Theta', 'R'
-        gtypes_list = list(df.GType.unique())
-
-        df = snp_for_plot_df.copy()
-        x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
-        gtypes_list = (df.GType.unique())
-
-        gtypes_for_gmm = list(cb_df[geno_col].unique())
-        gtypes_for_gmm.remove('NC')
-        n_components = len(gtypes_for_gmm)
-
-        snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-
-        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
-        snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{snp}.','', regex=False)
-
-        # handle missing
-        missing_df = pd.DataFrame()
-
-        missing_snp = snp_for_gmm_df.loc[snp_for_gmm_df.Theta.isna() | snp_for_gmm_df.R.isna() | snp_for_gmm_df.GType.isna()].copy()
-        missing_snp.loc[:,'snpid'] = snp
-        missing_df = missing_df.append(missing_snp)
-
-        missing_csv = csv_convert_df(missing_df)
-        all_flagged_csv = csv_convert_df(all_flagged)
+    if reclustered_df.shape[0] > 0:
         reclustered_csv = csv_convert_df(reclustered_df)
+        st.sidebar.download_button(
+            label="Download Reclustered Variants",
+            data=reclustered_csv,
+            file_name='reclustered.csv',
+            mime='text/csv'
+        )
 
-        expander4 = st.sidebar.expander("Downloads", expanded=False)
-        with expander4:
-            st.sidebar.download_button(
-                label="Download samples with missing theta|r|genotype",
-                data=missing_csv,
-                file_name='missing.csv',
-                mime='text/csv'
-            )
+        
+    # missing_df = pd.DataFrame()
 
-            st.sidebar.download_button(
-                label="Download ",
-                data=all_flagged_csv,
-                file_name='flagged.csv',
-                mime='text/csv'
-            )
+    # # Generate output report
+    # for snp in snps_list:
+    #     geno_col = snp + ".GType"
+    #     theta_col = snp + ".Theta"
+    #     r_col = snp + ".R"    
 
-            st.sidebar.download_button(
-                label="Download Reclustered Variants",
-                data=reclustered_csv,
-                file_name='reclustered.csv',
-                mime='text/csv'
-            )
+    #     gtypes = list(cb_df[geno_col].unique())
+
+    #     snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+    #     snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{snp}.', '', regex=False)
+
+    #     df = snp_for_plot_df.copy()
+    #     x_col, y_col = 'Theta', 'R'
+    #     gtypes_list = list(df.GType.unique())
+
+    #     df = snp_for_plot_df.copy()
+    #     x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
+    #     gtypes_list = (df.GType.unique())
+
+    #     gtypes_for_gmm = list(cb_df[geno_col].unique())
+    #     # if 'NC' in 
+    #     # gtypes_for_gmm.remove('NC')
+    #     n_components = len(gtypes_for_gmm)
+
+    #     snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+    #     snp_for_gmm_df_temp.columns = snp_for_gmm_df_temp.columns.str.replace(f'{snp}.','', regex=False)
+    #     # print(snp_for_gmm_df_temp.head())
+    #     snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp['Theta'].isna() & ~snp_for_gmm_df_temp['R'].isna() & ~snp_for_gmm_df_temp['GType'].isna()].copy()
+
+    #     # snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
+    #     # snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{snp}.','', regex=False)
+
+    #     # handle missing
+        
+
+    #     missing_snp = snp_for_gmm_df.loc[snp_for_gmm_df.Theta.isna() | snp_for_gmm_df.R.isna() | snp_for_gmm_df.GType.isna()].copy()
+    #     if missing_snp.shape[0] > 0:
+    #         missing_snp.loc[:,'snpid'] = snp
+    #         missing_df = missing_df.append(missing_snp)
+
+    # missing_csv = csv_convert_df(missing_df)
+    # all_flagged_csv = csv_convert_df(all_flagged)
+
+
+
+    # expander4 = st.sidebar.expander("Downloads", expanded=False)
+    # with expander4:
+    #     st.sidebar.download_button(
+    #         label="Download samples with missing theta|r|genotype",
+    #         data=missing_csv,
+    #         file_name='missing.csv',
+    #         mime='text/csv'
+    #     )
+
+    #     st.sidebar.download_button(
+    #         label="Download Flagged Variants File",
+    #         data=all_flagged_csv,
+    #         file_name='flagged.csv',
+    #         mime='text/csv'
+    #     )
+
+
 
         
 

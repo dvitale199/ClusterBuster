@@ -168,7 +168,7 @@ def plot_clusters(df, x_col, y_col, gtype_col, snpid):
 
 
 def gtype_gmm(snp_theta_r_df, n_components):
-    
+    IIDs = snp_theta_r_df.loc[:,'IID']
     X = snp_theta_r_df[['Theta','R']].copy()
 
     gmm = GaussianMixture(
@@ -181,7 +181,8 @@ def gtype_gmm(snp_theta_r_df, n_components):
     out_dict = {
         'gmm': gmm,
         'X': X,
-        'y_pred': labels
+        'y_pred': labels,
+        'IID':IIDs
     }
 
     return out_dict
