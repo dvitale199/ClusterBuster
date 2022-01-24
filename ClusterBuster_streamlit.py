@@ -7,7 +7,7 @@ import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
 
-from clusterbuster import parse_report, view_table_slice, plot_clusters
+from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_gmm
 
 st.write("""
 # ClusterBuster
@@ -65,7 +65,6 @@ if 'report' in st.session_state.keys():
     flagged_list = list(total_flagged.snpid.unique())
     # all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
 
-
     expander2 = st.sidebar.expander("Filter Flagged SNPs", expanded=False)
     with expander2:
         
@@ -73,7 +72,6 @@ if 'report' in st.session_state.keys():
         gentrain_flagged_checkbox = st.checkbox('GenTrain', value=False)
         all_flagged_checkbox = st.checkbox('All', value=False)
     
-
     if maf_flagged_checkbox and not gentrain_flagged_checkbox:
         st.header('Flagged SNPs')
         view_table_slice(maf_flagged)
@@ -122,9 +120,8 @@ if 'report' in st.session_state.keys():
                 format_func=lambda x: 'Select an option' if x == '' else x)
 
     if selected_snp:
-        st.header('Selected SNP')
-        st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
 
+        st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
 
         geno_col = selected_snp + ".GType"
         theta_col = selected_snp + ".Theta"
@@ -140,14 +137,41 @@ if 'report' in st.session_state.keys():
         gtypes_list = list(df.GType.unique())
 
         df = snp_for_plot_df.copy()
-        x_col, y_col = 'Theta', 'R'
+        x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
         gtypes_list = (df.GType.unique())
-        st.plotly_chart(plot_clusters(df,x_col,y_col,snpid=selected_snp))
+
+        st.plotly_chart(plot_clusters(df, x_col, y_col, gtype_col=gtype_col, snpid=selected_snp))
 
         recluster = st.button('Recluster Selected Variant')
 
         if recluster:
-            st.write('recluster!!!!!')
+
+            gtypes_for_gmm = list(cb_df[geno_col].unique())
+            gtypes_for_gmm.remove('NC')
+            n_components = len(gtypes_for_gmm)
+
+            snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+            snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
+            snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{selected_snp}.','', regex=False)
+
+            
+            gmm_out = gtype_gmm(snp_theta_r_df=snp_for_gmm_df, n_components=n_components)
+
+            gmm_plot_df = gmm_out['X']
+            gmm_plot_df.loc[:,'GType'] = gmm_out['y_pred']
+            gmm = gmm_out['gmm']
+
+            cluster_means = {gtype:gmm_plot_df.loc[gmm_plot_df.GType==gtype,'Theta'].mean() for gtype in gmm_plot_df.GType.unique()}
+
+            gtype_order = ['AA','AB','BB']
+            gtypes_for_gmm_ordered = [gtype for gtype in gtype_order if gtype in gtypes_for_gmm]
+            ordered_cluster_means = dict(sorted(cluster_means.items(), key=lambda item: item[1]))
+            gmm_gtype_map = {list(ordered_cluster_means.keys())[i]:gtype for i, gtype in enumerate(gtypes_for_gmm_ordered)}
+
+            gmm_plot_df.loc[:,'gtype_out'] = gmm_plot_df.loc[:,'GType'].replace(gmm_gtype_map)
+            gmm_plot_df.loc[:,'original_gtype'] = snp_for_gmm_df.loc[:,'GType']
+
+            st.plotly_chart(plot_gmm(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', gmm=gmm, snpid=selected_snp, n_std=5))
 
     else:
         st.warning('No SNPs Selected')
