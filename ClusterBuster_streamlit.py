@@ -7,7 +7,7 @@ import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
 
-from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_gmm
+from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_gmm, csv_convert_df
 
 st.write("""
 # ClusterBuster
@@ -16,7 +16,6 @@ This webapp investigates cluster quality for genotyped variants from the **Neuro
 
 
 # step 1: accept user input for report file
-
 expander1 = st.sidebar.expander("Click Here to Upload a GenomeStudio SNP Report", expanded=False)
 with expander1:
     st.subheader('Import GenomeStudio SNP Report')
@@ -53,6 +52,7 @@ if 'report' in st.session_state.keys():
     report = st.session_state['report']
     cb_df = report['clusterbuster_df']
     snps_df = report['flagged_snps']
+    snps_list = list(snps_df.snpid.unique())
 
     # flagged dfs
     total_flagged = snps_df[snps_df.maf_flag | snps_df.gentrain_flag].reset_index()
@@ -63,7 +63,7 @@ if 'report' in st.session_state.keys():
     snps_list = list(snps_df.snpid.unique())
 
     flagged_list = list(total_flagged.snpid.unique())
-    # all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
+    all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
 
     expander2 = st.sidebar.expander("Filter Flagged SNPs", expanded=False)
     with expander2:
@@ -142,19 +142,20 @@ if 'report' in st.session_state.keys():
 
         st.plotly_chart(plot_clusters(df, x_col, y_col, gtype_col=gtype_col, snpid=selected_snp))
 
+        gtypes_for_gmm = list(cb_df[geno_col].unique())
+        gtypes_for_gmm.remove('NC')
+        n_components = len(gtypes_for_gmm)
+
+        snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+
+        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
+        snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{selected_snp}.','', regex=False)
+
         recluster = st.button('Recluster Selected Variant')
+        reclustered_df = pd.DataFrame()
 
         if recluster:
 
-            gtypes_for_gmm = list(cb_df[geno_col].unique())
-            gtypes_for_gmm.remove('NC')
-            n_components = len(gtypes_for_gmm)
-
-            snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-            snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
-            snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{selected_snp}.','', regex=False)
-
-            
             gmm_out = gtype_gmm(snp_theta_r_df=snp_for_gmm_df, n_components=n_components)
 
             gmm_plot_df = gmm_out['X']
@@ -170,14 +171,83 @@ if 'report' in st.session_state.keys():
 
             gmm_plot_df.loc[:,'gtype_out'] = gmm_plot_df.loc[:,'GType'].replace(gmm_gtype_map)
             gmm_plot_df.loc[:,'original_gtype'] = snp_for_gmm_df.loc[:,'GType']
+            gmm_plot_df.loc[:,'snpid'] = selected_snp
+            reclustered_df = reclustered_df.append(gmm_plot_df[['snpid','gtype_out']])
 
             st.plotly_chart(plot_gmm(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', gmm=gmm, snpid=selected_snp, n_std=5))
 
     else:
-        st.warning('No SNPs Selected')
+        st.warning('Please Select a SNP')
+    
+
+    # Generate output report
+    for snp in snps_list:
+        geno_col = snp + ".GType"
+        theta_col = snp + ".Theta"
+        r_col = snp + ".R"    
+
+        gtypes = list(cb_df[geno_col].unique())
+
+        snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+        snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{snp}.', '', regex=False)
+
+        df = snp_for_plot_df.copy()
+        x_col, y_col = 'Theta', 'R'
+        gtypes_list = list(df.GType.unique())
+
+        df = snp_for_plot_df.copy()
+        x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
+        gtypes_list = (df.GType.unique())
+
+        gtypes_for_gmm = list(cb_df[geno_col].unique())
+        gtypes_for_gmm.remove('NC')
+        n_components = len(gtypes_for_gmm)
+
+        snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+
+        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp.Theta.isna() & ~snp_for_gmm_df_temp.R.isna() & ~snp_for_gmm_df_temp.GType.isna()].copy()
+        snp_for_gmm_df.columns = snp_for_gmm_df.columns.str.replace(f'{snp}.','', regex=False)
+
+        # handle missing
+        missing_df = pd.DataFrame()
+
+        missing_snp = snp_for_gmm_df.loc[snp_for_gmm_df.Theta.isna() | snp_for_gmm_df.R.isna() | snp_for_gmm_df.GType.isna()].copy()
+        missing_snp.loc[:,'snpid'] = snp
+        missing_df = missing_df.append(missing_snp)
+
+        missing_csv = csv_convert_df(missing_df)
+        all_flagged_csv = csv_convert_df(all_flagged)
+        reclustered_csv = csv_convert_df(reclustered_df)
+
+        expander4 = st.sidebar.expander("Downloads", expanded=False)
+        with expander4:
+            st.sidebar.download_button(
+                label="Download samples with missing theta|r|genotype",
+                data=missing_csv,
+                file_name='missing.csv',
+                mime='text/csv'
+            )
+
+            st.sidebar.download_button(
+                label="Download ",
+                data=all_flagged_csv,
+                file_name='flagged.csv',
+                mime='text/csv'
+            )
+
+            st.sidebar.download_button(
+                label="Download Reclustered Variants",
+                data=reclustered_csv,
+                file_name='reclustered.csv',
+                mime='text/csv'
+            )
 
         
-    
+
+        
+
+
+
 
 
 

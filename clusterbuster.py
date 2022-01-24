@@ -92,6 +92,8 @@ def parse_report(report_in, flag_maf, flag_gentrain):
     flag_df.loc[:,'maf_flag'] = np.where(flag_df.maf<flag_maf, True, False)
     flag_df.loc[:,'gentrain_flag'] = np.where(flag_df.gentrain_score<flag_gentrain, True, False)
 
+    missing_df = pd.DataFrame()
+
 
     out_dict = {
         'clusterbuster_df': clusterbuster_out,
@@ -285,6 +287,11 @@ def plot_gmm(df, x_col, y_col, gtype_col, gmm, snpid, n_std=3):
     
     return fig
 
+
+@st.cache
+def csv_convert_df(df):
+    
+    return df.to_csv().encode('utf-8')
 
 #### MAY WANT TO GRIDSEARCH OVER COVARIANCE TYPE!!!!
 # def gtype_gmm(snp_theta_r_df, n_components, snp):
