@@ -6,46 +6,59 @@ import seaborn as sns
 import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
+from PIL import Image
 
 from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_gmm, csv_convert_df
+icon = Image.open('img/DTI_logo_white_square-removebg-preview.png')
 
-st.write("""
-# ClusterBuster
-This webapp investigates cluster quality for genotyped variants from the **NeuroBoosterArray**
-""")
+st.set_page_config(
+     page_title="DTi Genotype Analysis",
+     page_icon=icon,
+     layout="wide",
+     initial_sidebar_state="expanded",
+     menu_items={
+         'About': "# This is a header. DTi Genotype Analysis: Investigate cluster quality for genotyped variants from the **NeuroBoosterArray**"
+     }
+ )
 
+st.title('DTi Genotype Analysis')
+
+# st.write("""
+# # ClusterBuster
+# This webapp investigates cluster quality for genotyped variants from the **NeuroBoosterArray**
+# """)
 
 # step 1: accept user input for report file
-expander1 = st.sidebar.expander("Click Here to Upload a GenomeStudio SNP Report", expanded=False)
-with expander1:
-    st.subheader('Import GenomeStudio SNP Report')
-    reportfile = st.file_uploader('Report File Upload')
+# expander1 = st.sidebar.expander("Click Here to Upload a GenomeStudio SNP Report", expanded=False)
+# with expander1:
+st.sidebar.subheader('Upload GenomeStudio SNP Report')
+reportfile = st.sidebar.file_uploader('')
 
-    if reportfile:
+if reportfile:
 
-        maf_threshold = st.slider('MAF Threshold for Flagging', value=0.010, step=0.005, min_value=0.000, max_value=1.0)
-        gentrain_threshold = st.slider('MAF Threshold for Flagging', value=0.500, step=0.005, min_value=0.000, max_value=1.0)
-        
-        process_report_button = st.button("Process Report")
+    maf_threshold = st.sidebar.slider('MAF Threshold for Flagging', value=0.010, step=0.005, min_value=0.000, max_value=1.0)
+    gentrain_threshold = st.sidebar.slider('GenTrain Threshold for Flagging', value=0.500, step=0.005, min_value=0.000, max_value=1.0)
+    
+    process_report_button = st.sidebar.button("Process Report")
 
-        if process_report_button:
-            report_in = pd.read_csv(reportfile, engine='c', dtype={'Chr':str, 'position':int})
-            report = parse_report(report_in, flag_maf=maf_threshold, flag_gentrain=gentrain_threshold)
+    if process_report_button:
+        report_in = pd.read_csv(reportfile, engine='c', dtype={'Chr':str, 'position':int})
+        report = parse_report(report_in, flag_maf=maf_threshold, flag_gentrain=gentrain_threshold)
 
-            if report not in st.session_state:
-                st.session_state['report'] = report
-                st.session_state['update'] = False
+        if report not in st.session_state:
+            st.session_state['report'] = report
+            st.session_state['update'] = False
 
-            if report in st.session_state:
-                st.session_state['report'] = report
-                st.session_state['update'] = True
+        if report in st.session_state:
+            st.session_state['report'] = report
+            st.session_state['update'] = True
 
-            with st.spinner('Calculating MAFs...'):
-                time.sleep(2)
-            with st.spinner('Flagging Variants for low MAF/GenCall...'):
-                time.sleep(2)
+        with st.spinner('Calculating MAFs...'):
+            time.sleep(2)
+        with st.spinner('Flagging Variants for low MAF/GenCall...'):
+            time.sleep(2)
 
-            st.success('Done! Your file has been read and snps have been flagged for low MAF and GenTrain Score')
+        st.success('Done! Your file has been read and snps have been flagged for low MAF and GenTrain Score')
 
 if 'report' in st.session_state.keys():
     
