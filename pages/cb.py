@@ -169,7 +169,11 @@ def run():
             # with left_column:
             st.plotly_chart(recluster_fig)
             
-            st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
+            table_button = st.button('Show Table')
+            if table_button:
+                st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
+
+                
             
             # fig = make_subplots(rows=1, cols=2)
             # fig.add_trace(cluster_fig, row=1, col=1)
