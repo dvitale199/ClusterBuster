@@ -9,12 +9,10 @@ def run():
     
     st.title('PlusCNV')
 
-    st.sidebar.subheader('Upload CNV Reports')
-
     reports_exp = st.sidebar.expander("Upload CNV Reports", expanded=False)
     with reports_exp:
-        baf = st.file_uploader('BAF Report')
-        lrr = st.file_uploader('LRR Report')
+        baf = st.file_uploader('BAF')
+        lrr = st.file_uploader('LRR')
         bim = st.file_uploader('BIM')
 
 
@@ -75,7 +73,7 @@ def process_cnv_reports(BAF, LRR, BIM, sample_id):
 
     plot_df = process_cnv_reports(BAF_temp, LRR)
 
-def plot_BAF()
+def plot_BAF():
     BAF_title = "sample ID " + str(sample_id) + " @ " + gene_label + " on CHR " + str(chromosome) + " +/- " + str(buffer) + " BP."
     low_X = gene_start - buffer
     high_X = gene_end + buffer
