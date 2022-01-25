@@ -17,15 +17,32 @@ from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_g
 
 
 def run():
-    st.title('DTi Genotype Analysis')
+    st.sidebar.title('DTi Genotype Analysis')
 
     st.sidebar.subheader('Upload GenomeStudio Variant Report')
 
-    reportfile = st.sidebar.file_uploader(' ')
+    upload_expander = st.sidebar.expander("Upload Report", expanded=False)
 
+    with upload_expander:
+
+        reportfile = st.file_uploader('Report')
+
+
+        input_snp_file = st.file_uploader('Variant List (Optional)')
+
+        if input_snp_file:
+            input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
+            input_snp_list = list(input_snp_df.loc[:,'snp'])
+        ##### Add try except to check file format
+        #### add check to see if anything in the input list is not in snp data
+        else:
+            input_snp_list = None
+
+        
 
     if reportfile:
         threshold_expander = st.sidebar.expander("Genotype Quality Control Thresholds (Advanced)", expanded=False)
+        
         with threshold_expander:
             maf_threshold = st.slider('MAF Threshold', value=0.010, step=0.005, min_value=0.000, max_value=1.0)
             gentrain_threshold = st.slider('GenTrain Threshold', value=0.500, step=0.005, min_value=0.000, max_value=1.0)
@@ -67,30 +84,24 @@ def run():
 
         snps_list = list(snps_df.snpid.unique())
         flagged_snps_list = list(total_flagged.snpid.unique())
-
-        if total_flagged.shape[0]>0:
-
-            flagged_csv = csv_convert_df(total_flagged)
-            st.sidebar.download_button(
-                label="Export Flagged Variants",
-                data=flagged_csv,
-                file_name='flagged.csv',
-                mime='text/csv'
-            )
-
-        snp_list_upload_expander = st.sidebar.expander("Upload Variant List", expanded=False)
-
-        with snp_list_upload_expander:
-
-            input_snp_file = st.file_uploader('  ')
         
-        if input_snp_file:
-            input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
-            input_snp_list = list(input_snp_df.loc[:,'snp'])
-        ##### Add try except to check file format
-        #### add check to see if anything in the input list is not in snp data
+        if total_flagged.shape[0]>0:
+            st.session_state['flagged'] = total_flagged
         else:
-            input_snp_list = None
+            total_flagged = None
+        # snp_list_upload_expander = st.sidebar.expander("Upload Variant List", expanded=False)
+
+        # with snp_list_upload_expander:
+
+        #     input_snp_file = st.file_uploader('  ')
+        
+        # if input_snp_file:
+        #     input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
+        #     input_snp_list = list(input_snp_df.loc[:,'snp'])
+        # ##### Add try except to check file format
+        # #### add check to see if anything in the input list is not in snp data
+        # else:
+        #     input_snp_list = None
 
         if input_snp_list:
             selected_snp = st.selectbox(
@@ -164,9 +175,9 @@ def run():
             recluster_fig = plot_hist_contour(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', xlim=xlim, ylim=ylim)
 
             # left_column, right_column = st.columns([1,1])
-            # with right_column:
+            st.header("Default Clusters")
             st.plotly_chart(cluster_fig)
-            # with left_column:
+            st.header("DTi Clusters")
             st.plotly_chart(recluster_fig)
             
             table_button = st.button('Show Table')
@@ -179,15 +190,30 @@ def run():
             # fig.add_trace(cluster_fig, row=1, col=1)
             # fig.add_trace(recluster_fig, row=1, col=2)
             # st.plotly_chart(fig)
+    st.sidebar.write("##")
+    export_expander = st.sidebar.expander("Download Reports", expanded=False)
+        
+    with export_expander:
 
+        if 'reclustered' in st.session_state:
+            reclustered_df = st.session_state['reclustered']
+            if reclustered_df.shape[0] > 0:
+                reclustered_csv = csv_convert_df(reclustered_df)
+                st.download_button(
+                    label="Reclustered Variants",
+                    data=reclustered_csv,
+                    file_name='reclustered.csv',
+                    mime='text/csv'
+                )
 
-    if 'reclustered' in st.session_state:
-        reclustered_df = st.session_state['reclustered']
-        if reclustered_df.shape[0] > 0:
-            reclustered_csv = csv_convert_df(reclustered_df)
-            st.sidebar.download_button(
-                label="Download Reclustered Variants",
-                data=reclustered_csv,
-                file_name='reclustered.csv',
+        
+        if 'flagged' in st.session_state:
+            flagged_out = st.session_state['flagged']
+
+            flagged_csv = csv_convert_df(flagged_out)
+            st.download_button(
+                label="Flagged Variants",
+                data=flagged_csv,
+                file_name='flagged.csv',
                 mime='text/csv'
             )
