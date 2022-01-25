@@ -226,7 +226,28 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
     return fig
 
 
+@st.cache()
+def process_cnv_reports(BAF, LRR, BIM, sample_id):
 
+    # BAF reduce and transpose.
+    BAF_temp_reduced = BAF.loc[BAF['V1'] == sample_id]
+    BAF_temp_reduced.drop(columns=['V1','V2','V3','V4','V5','V6'], inplace=True)
+    BAF_transposed = BAF_temp_reduced.transpose()
+    BAF_transposed.columns = ["BAF"]
+
+    # LRR reduce and transpose.
+    LRR_temp_reduced = LRR.loc[LRR['V1'] == sample_id]
+    LRR_temp_reduced.drop(columns=['V1','V2','V3','V4','V5','V6'], inplace=True)
+    LRR_transposed = LRR_temp_reduced.transpose()
+    LRR_transposed.columns = ["LRR"]
+
+    BAF_transposed.reset_index(drop=True, inplace=True)
+    LRR_transposed.reset_index(drop=True, inplace=True)
+    BIM.reset_index(drop=True, inplace=True)
+
+    out_df = pd.concat([BAF_transposed, LRR_transposed, BIM], axis=1)
+
+    return out_df
 
 
 # def confidence_ellipse(x, y, n_std=1.96, size=100):

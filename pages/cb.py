@@ -27,7 +27,6 @@ def run():
 
         reportfile = st.file_uploader('Report')
 
-
         input_snp_file = st.file_uploader('Variant List (Optional)')
 
         if input_snp_file:

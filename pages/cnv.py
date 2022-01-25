@@ -6,34 +6,12 @@ import plotly.graph_objects as go
 import os
 import io
 
-from clusterbuster import csv_convert_df
+from clusterbuster import csv_convert_df, process_cnv_reports
 
-@st.cache()
-def process_cnv_reports(BAF, LRR, BIM, sample_id):
-
-    # BAF reduce and transpose.
-    BAF_temp_reduced = BAF.loc[BAF['V1'] == sample_id]
-    BAF_temp_reduced.drop(columns=['V1','V2','V3','V4','V5','V6'], inplace=True)
-    BAF_transposed = BAF_temp_reduced.transpose()
-    BAF_transposed.columns = ["BAF"]
-
-    # LRR reduce and transpose.
-    LRR_temp_reduced = LRR.loc[LRR['V1'] == sample_id]
-    LRR_temp_reduced.drop(columns=['V1','V2','V3','V4','V5','V6'], inplace=True)
-    LRR_transposed = LRR_temp_reduced.transpose()
-    LRR_transposed.columns = ["LRR"]
-
-    BAF_transposed.reset_index(drop=True, inplace=True)
-    LRR_transposed.reset_index(drop=True, inplace=True)
-    BIM.reset_index(drop=True, inplace=True)
-
-    out_df = pd.concat([BAF_transposed, LRR_transposed, BIM], axis=1)
-
-    return out_df
 
 def run():
     
-    st.sidebar.title('PlusCNV')
+    st.sidebar.title('DTi Genotype Analysis')
     bim_header = ["CHR","RS","CM","BP","A1","A2"]
     reports_exp = st.sidebar.expander("Upload CNV Reports", expanded=False)
     # st.session_state['plot_df'] = None
@@ -53,11 +31,6 @@ def run():
             st.session_state['LRR_temp'] = LRR_temp
             st.session_state['BIM'] = BIM
 
-    ##### TEST FILES ####
-    # baf : "SNCA_gene_region_1_ukb_baf_chr4_v2_FINAL_reduced.txt"
-    # lrr : "SNCA_gene_region_1_ukb_l2r_chr4_v2_FINAL_reduced.txt"
-    # bim : "SNCA_gene_region1_ukb_bim_chr4_v2.txt"
-    ###################################
     if all(df in st.session_state for df in ['BAF_temp','LRR_temp','BIM']):
         BAF_temp = st.session_state['BAF_temp']
         LRR_temp = st.session_state['LRR_temp']
@@ -186,38 +159,4 @@ def run():
                         file_name='LRR_fig.html',
                         mime='text/html'
                     )
-
-
-                
-    #                 # st.session_state['cnv_table'] = cnv_table
-    #                 st.session_state['BAF_fig'] = BAF_fig
-    #                 st.session_state['LRR_fig'] = BAF_fig
-
-    # # if 'cnv_table' in st.session_state:
-    # #     cnv_table = st.session_state['cnv_table']
-    # #     st.header('CNVs') 
-    # #     st.table(cnv_table)
-    # if 'BAF_fig' in st.session_state:
-    #     BAF_fig = st.session_state['BAF_fig']
-    #     st.plotly_chart(BAF_fig)
-    # if 'LRR_fig' in st.session_state:
-    #     LRR_fig = st.session_state['LRR_fig']
-    #     st.plotly_chart(LRR_fig)
-    
-
-            
-
-
-                # # Select the gene. This is where positions would be looked up. That can come later after demo.
-                # # Also should include a window of X BP around gene as an option for viewing.
-
-
-                    # plot_df = st.session_state['plot_df']
-                    # sample_id = st.session_state['sample_id']
-                    # gene_label = st.session_state['gene_label']
-
-                    # if plot_df.shape[0]>0 and sample_id and gene_label:
-
-                    
-
 
