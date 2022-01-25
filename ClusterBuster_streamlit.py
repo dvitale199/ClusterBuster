@@ -7,9 +7,15 @@ import streamlit as st
 from sklearn.mixture import GaussianMixture
 import time
 from PIL import Image
+from plotly.subplots import make_subplots
+# from ClusterBuster.pages import gt
+# from ClusterBuster.pages impo, gt
+# from ClusterBuster import cnv
+from pages import cb, cnv, gt
 
-from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_gmm, csv_convert_df
-icon = Image.open('img/DTI_logo_white_square-removebg-preview.png')
+from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_gmm, plot_hist_contour, csv_convert_df
+
+icon = Image.open('img/dti_gray_logo.png')
 
 st.set_page_config(
      page_title="DTi Genotype Analysis",
@@ -21,188 +27,225 @@ st.set_page_config(
      }
  )
 
-st.title('DTi Genotype Analysis')
 
-# st.write("""
-# # ClusterBuster
-# This webapp investigates cluster quality for genotyped variants from the **NeuroBoosterArray**
-# """)
+st.markdown(
+    '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">',
+    unsafe_allow_html=True,)
+query_params = st.experimental_get_query_params()
+tabs = ["ClusterBuster", "PlusCNV", "GenoTools"]
+if "tab" in query_params:
+    active_tab = query_params["tab"][0]
+else:
+    active_tab = "ClusterBuster"
 
-# step 1: accept user input for report file
-# expander1 = st.sidebar.expander("Click Here to Upload a GenomeStudio SNP Report", expanded=False)
-# with expander1:
-st.sidebar.subheader('Upload GenomeStudio SNP Report')
-reportfile = st.sidebar.file_uploader('')
+if active_tab not in tabs:
+    st.experimental_set_query_params(tab="ClusterBuster")
+    active_tab = "ClusterBuster"
 
-if reportfile:
+li_items = "".join(
+    f"""
+    <li class="nav-item">
+        <a class="nav-link{' active' if t==active_tab else ''}" href="/?tab={t}">{t}</a>
+    </li>
+    """
+    for t in tabs
+)
+tabs_html = f"""
+    <ul class="nav nav-tabs">
+    {li_items}
+    </ul>
+"""
 
-    maf_threshold = st.sidebar.slider('MAF Threshold for Flagging', value=0.010, step=0.005, min_value=0.000, max_value=1.0)
-    gentrain_threshold = st.sidebar.slider('GenTrain Threshold for Flagging', value=0.500, step=0.005, min_value=0.000, max_value=1.0)
+st.markdown(tabs_html, unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+if active_tab == "ClusterBuster":
+    cb.run()
+elif active_tab == "PlusCNV":
+    cnv.run()
+elif active_tab == "GenoTools":
+    gt.run()
+else:
+    st.error("Something has gone terribly wrong.")
+
+
+
+
+
+
+
+
+
+# st.title('DTi Genotype Analysis')
+
+# st.sidebar.subheader('Upload GenomeStudio Variant Report')
+
+# reportfile = st.sidebar.file_uploader('')
+
+
+# if reportfile:
+#     threshold_expander = st.sidebar.expander("Genotype Quality Control Thresholds (Advanced)", expanded=False)
+#     with threshold_expander:
+#         maf_threshold = st.slider('MAF Threshold', value=0.010, step=0.005, min_value=0.000, max_value=1.0)
+#         gentrain_threshold = st.slider('GenTrain Threshold', value=0.500, step=0.005, min_value=0.000, max_value=1.0)
     
-    process_report_button = st.sidebar.button("Process Report")
+#     process_report_button = st.sidebar.button("Analyze Clusters")
 
-    if process_report_button:
-        report_in = pd.read_csv(reportfile, engine='c', dtype={'Chr':str, 'position':int})
-        report = parse_report(report_in, flag_maf=maf_threshold, flag_gentrain=gentrain_threshold)
+#     if process_report_button:
+#         report_in = pd.read_csv(reportfile, engine='c', dtype={'Chr':str, 'position':int})
+#         report = parse_report(report_in, flag_maf=maf_threshold, flag_gentrain=gentrain_threshold)
 
-        if report not in st.session_state:
-            st.session_state['report'] = report
-            st.session_state['update'] = False
+#         if report not in st.session_state:
+#             st.session_state['report'] = report
+#             st.session_state['update'] = False
 
-        if report in st.session_state:
-            st.session_state['report'] = report
-            st.session_state['update'] = True
+#         if report in st.session_state:
+#             st.session_state['report'] = report
+#             st.session_state['update'] = True
 
-        with st.spinner('Calculating MAFs...'):
-            time.sleep(2)
-        with st.spinner('Flagging Variants for low MAF/GenCall...'):
-            time.sleep(2)
+#         with st.spinner('Calculating MAFs...'):
+#             time.sleep(2)
+#         with st.spinner('Flagging Variants for low MAF/GenTrain...'):
+#             time.sleep(2)
 
-        st.success('Done! Your file has been read and snps have been flagged for low MAF and GenTrain Score')
+#         st.sidebar.success('SNPs of interest have been flagged for low maf and gentrain')
 
-if 'report' in st.session_state.keys():
+# if 'report' in st.session_state.keys():
     
-    report = st.session_state['report']
-    cb_df = report['clusterbuster_df']
-    snps_df = report['flagged_snps']
-    snps_list = list(snps_df.snpid.unique())
+#     report = st.session_state['report']
+#     cb_df = report['clusterbuster_df']
+#     snps_df = report['flagged_snps']
+#     snps_list = list(snps_df.snpid.unique())
 
-    # flagged dfs
-    total_flagged = snps_df[snps_df.maf_flag | snps_df.gentrain_flag].reset_index()
-    both_flagged = snps_df[snps_df.maf_flag & snps_df.gentrain_flag].reset_index()
-    maf_flagged = snps_df.loc[snps_df.maf_flag].reset_index()
-    gentrain_flagged = snps_df.loc[snps_df.gentrain_flag].reset_index()
-    reclustered_df = pd.DataFrame()
+#     # flagged dfs
+#     total_flagged = snps_df[snps_df.maf_flag | snps_df.gentrain_flag].reset_index()
+#     both_flagged = snps_df[snps_df.maf_flag & snps_df.gentrain_flag].reset_index()
+#     maf_flagged = snps_df.loc[snps_df.maf_flag].reset_index()
+#     gentrain_flagged = snps_df.loc[snps_df.gentrain_flag].reset_index()
 
-    snps_list = list(snps_df.snpid.unique())
 
-    flagged_list = list(total_flagged.snpid.unique())
-    all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
+#     snps_list = list(snps_df.snpid.unique())
+#     flagged_snps_list = list(total_flagged.snpid.unique())
 
-    expander2 = st.sidebar.expander("Filter Flagged SNPs", expanded=False)
-    with expander2:
+#     if total_flagged.shape[0]>0:
+
+#         flagged_csv = csv_convert_df(total_flagged)
+#         st.sidebar.download_button(
+#             label="Export Flagged Variants",
+#             data=flagged_csv,
+#             file_name='flagged.csv',
+#             mime='text/csv'
+#         )
+
+#     snp_list_upload_expander = st.sidebar.expander("Upload Variant List", expanded=False)
+
+#     with snp_list_upload_expander:
+
+#         input_snp_file = st.file_uploader('  ')
+    
+#     if input_snp_file:
+#         input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
+#         input_snp_list = list(input_snp_df.loc[:,'snp'])
+#     ##### Add try except to check file format
+#     #### add check to see if anything in the input list is not in snp data
+#     else:
+#         input_snp_list = None
+
+#     if input_snp_list:
+#         selected_snp = st.selectbox(
+#         "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
+#         options= input_snp_list,
+#         format_func=lambda x: 'Variant' if x == '' else x)
+#     else:
+#         # append empty string to front of snp list. if empty string chosen "select an option"
+#         selected_snp = st.selectbox(
+#             "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
+#             options=flagged_snps_list,
+#             format_func=lambda x: 'Variant' if x == '' else x)
+
+#     if selected_snp:
+
+#         geno_col = selected_snp + ".GType"
+#         theta_col = selected_snp + ".Theta"
+#         r_col = selected_snp + ".R"
+
+#         gtypes = list(cb_df[geno_col].unique())
+
+#         snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+#         snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{selected_snp}.', '', regex=False)
+
+#         # df = snp_for_plot_df.copy()
+#         # x_col, y_col = 'Theta', 'R'
+#         # gtypes_list = list(df.GType.unique())
+
+#         df = snp_for_plot_df.copy()
+#         x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
+#         gtypes_list = (df.GType.unique())
+
+
+#         gtypes_for_gmm = list(cb_df[geno_col].unique())
+#         if 'NC' in gtypes_for_gmm:
+#             gtypes_for_gmm.remove('NC')
+#         n_components = len(gtypes_for_gmm)
+
+#         snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
+#         snp_for_gmm_df_temp.columns = snp_for_gmm_df_temp.columns.str.replace(f'{selected_snp}.','', regex=False)
+#         snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp['Theta'].isna() & ~snp_for_gmm_df_temp['R'].isna() & ~snp_for_gmm_df_temp['GType'].isna()].copy()
+
+#         gmm_out = gtype_gmm(snp_theta_r_df=snp_for_gmm_df, n_components=n_components)
+
+#         gmm_plot_df = gmm_out['X']
+#         gmm_plot_df.loc[:,'GType'] = gmm_out['y_pred']
+#         gmm_plot_df.loc[:,'IID'] = gmm_out['IID']
+#         gmm = gmm_out['gmm']
+
+#         cluster_means = {gtype:gmm_plot_df.loc[gmm_plot_df.GType==gtype,'Theta'].mean() for gtype in gmm_plot_df.GType.unique()}
+
+#         gtype_order = ['AA','AB','BB']
+#         gtypes_for_gmm_ordered = [gtype for gtype in gtype_order if gtype in gtypes_for_gmm]
+#         ordered_cluster_means = dict(sorted(cluster_means.items(), key=lambda item: item[1]))
+#         gmm_gtype_map = {list(ordered_cluster_means.keys())[i]:gtype for i, gtype in enumerate(gtypes_for_gmm_ordered)}
+
+#         gmm_plot_df.loc[:,'gtype_out'] = gmm_plot_df.loc[:,'GType'].replace(gmm_gtype_map)
+#         gmm_plot_df.loc[:,'original_gtype'] = snp_for_gmm_df.loc[:,'GType']
+#         gmm_plot_df.loc[:,'snpid'] = selected_snp
+
+#         reclustered_df = gmm_plot_df[['IID','snpid','gtype_out']].copy()
+#         if "reclustered" not in st.session_state:
+#             st.session_state['reclustered'] = reclustered_df
+#         else:
+#             st.session_state['reclustered'] = st.session_state['reclustered'].append(reclustered_df)
+
+#         cluster_plot = plot_clusters(df, x_col, y_col, gtype_col=gtype_col, snpid=selected_snp)
+#         cluster_fig = cluster_plot['fig']
+#         xlim = cluster_plot['xlim']
+#         ylim = cluster_plot['ylim']
+#         recluster_fig = plot_hist_contour(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', xlim=xlim, ylim=ylim)
+
+#         # left_column, right_column = st.columns([1,1])
+#         # with right_column:
+#         st.plotly_chart(cluster_fig)
+#         # with left_column:
+#         st.plotly_chart(recluster_fig)
         
-        maf_flagged_checkbox = st.checkbox('MAF', value=False)
-        gentrain_flagged_checkbox = st.checkbox('GenTrain', value=False)
-        all_flagged_checkbox = st.checkbox('All', value=False)
-    
-    if maf_flagged_checkbox and not gentrain_flagged_checkbox:
-        st.header('Flagged SNPs')
-        view_table_slice(maf_flagged)
-        all_flagged_checkbox = False
-
-    if gentrain_flagged_checkbox and not maf_flagged_checkbox:
-        st.header('Flagged SNPs')
-        view_table_slice(gentrain_flagged)
-        all_flagged_checkbox = False
-
-    if maf_flagged_checkbox and gentrain_flagged_checkbox:
-        st.header('Flagged SNPs')
-        view_table_slice(both_flagged)
-        all_flagged_checkbox = False
-
-    if all_flagged_checkbox:
-        st.header('Flagged SNPs')
-        view_table_slice(total_flagged)
-        gentrain_flagged_checkbox = False
-        maf_flagged_checkbox = False
-
-    expander3 = st.sidebar.expander("Search SNPs", expanded=False)
-
-    with expander3:
-
-        st.write('Upload a list of Variants:')
-        input_snp_file = st.file_uploader('Variant List Upload')
-        if input_snp_file:
-            input_snp_df = pd.read_csv(input_snp_file, header=None, names=['snp'])
-            input_snp_list = list(input_snp_df.loc[:,'snp'])
-        ##### Add try except to check file format
-        #### add check to see if anything in the input list is not in snp data
-        else:
-            input_snp_list = None
-
-        if input_snp_list:
-            selected_snp = st.selectbox(
-            "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
-            options=[''] + input_snp_list,
-            format_func=lambda x: 'Select an option' if x == '' else x)
-        else:
-            # append empty string to front of snp list. if empty string chosen "select an option"
-            selected_snp = st.selectbox(
-                "Search by keywords for snpid, chr:pos, or chr:pos1-pos2", 
-                options=[''] + snps_list,
-                format_func=lambda x: 'Select an option' if x == '' else x)
-
-    if selected_snp:
-
-        st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
-
-        geno_col = selected_snp + ".GType"
-        theta_col = selected_snp + ".Theta"
-        r_col = selected_snp + ".R"
-
-        gtypes = list(cb_df[geno_col].unique())
-
-        snp_for_plot_df = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-        snp_for_plot_df.columns = snp_for_plot_df.columns.str.replace(f'{selected_snp}.', '', regex=False)
-
-        # df = snp_for_plot_df.copy()
-        # x_col, y_col = 'Theta', 'R'
-        # gtypes_list = list(df.GType.unique())
-
-        df = snp_for_plot_df.copy()
-        x_col, y_col, gtype_col = 'Theta', 'R', 'GType'
-        gtypes_list = (df.GType.unique())
-
-        st.plotly_chart(plot_clusters(df, x_col, y_col, gtype_col=gtype_col, snpid=selected_snp))
-
-        gtypes_for_gmm = list(cb_df[geno_col].unique())
-        gtypes_for_gmm.remove('NC')
-        n_components = len(gtypes_for_gmm)
-
-        snp_for_gmm_df_temp = cb_df[['IID', theta_col, r_col, geno_col]].copy()
-        snp_for_gmm_df_temp.columns = snp_for_gmm_df_temp.columns.str.replace(f'{selected_snp}.','', regex=False)
-        snp_for_gmm_df = snp_for_gmm_df_temp.loc[~snp_for_gmm_df_temp['Theta'].isna() & ~snp_for_gmm_df_temp['R'].isna() & ~snp_for_gmm_df_temp['GType'].isna()].copy()
+#         st.table(snps_df.loc[snps_df.snpid == selected_snp].reset_index().drop(columns=['index']))
         
+#         # fig = make_subplots(rows=1, cols=2)
+#         # fig.add_trace(cluster_fig, row=1, col=1)
+#         # fig.add_trace(recluster_fig, row=1, col=2)
+#         # st.plotly_chart(fig)
 
-        recluster = st.button('Recluster Selected Variant')
-        
 
-        if recluster:
-
-            gmm_out = gtype_gmm(snp_theta_r_df=snp_for_gmm_df, n_components=n_components)
-
-            gmm_plot_df = gmm_out['X']
-            gmm_plot_df.loc[:,'GType'] = gmm_out['y_pred']
-            gmm_plot_df.loc[:,'IID'] = gmm_out['IID']
-            gmm = gmm_out['gmm']
-
-            cluster_means = {gtype:gmm_plot_df.loc[gmm_plot_df.GType==gtype,'Theta'].mean() for gtype in gmm_plot_df.GType.unique()}
-
-            gtype_order = ['AA','AB','BB']
-            gtypes_for_gmm_ordered = [gtype for gtype in gtype_order if gtype in gtypes_for_gmm]
-            ordered_cluster_means = dict(sorted(cluster_means.items(), key=lambda item: item[1]))
-            gmm_gtype_map = {list(ordered_cluster_means.keys())[i]:gtype for i, gtype in enumerate(gtypes_for_gmm_ordered)}
-
-            gmm_plot_df.loc[:,'gtype_out'] = gmm_plot_df.loc[:,'GType'].replace(gmm_gtype_map)
-            gmm_plot_df.loc[:,'original_gtype'] = snp_for_gmm_df.loc[:,'GType']
-            gmm_plot_df.loc[:,'snpid'] = selected_snp
-            reclustered_df = reclustered_df.append(gmm_plot_df[['IID','snpid','gtype_out']])
-
-            st.plotly_chart(plot_gmm(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', gmm=gmm, snpid=selected_snp, n_std=5))
-
-    else:
-        st.warning('Please Select a SNP')
-    
-
-    if reclustered_df.shape[0] > 0:
-        reclustered_csv = csv_convert_df(reclustered_df)
-        st.sidebar.download_button(
-            label="Download Reclustered Variants",
-            data=reclustered_csv,
-            file_name='reclustered.csv',
-            mime='text/csv'
-        )
+# if 'reclustered' in st.session_state:
+#     reclustered_df = st.session_state['reclustered']
+#     if reclustered_df.shape[0] > 0:
+#         reclustered_csv = csv_convert_df(reclustered_df)
+#         st.sidebar.download_button(
+#             label="Download Reclustered Variants",
+#             data=reclustered_csv,
+#             file_name='reclustered.csv',
+#             mime='text/csv'
+#         )
 
         
     # missing_df = pd.DataFrame()
@@ -281,6 +324,36 @@ if 'report' in st.session_state.keys():
 
 
 
+    # flagged_list = list(total_flagged.snpid.unique())
+    # all_flagged = snps_df.loc[snps_df.snpid.isin(flagged_list)]
+
+    # expander2 = st.sidebar.expander("Filter Flagged SNPs", expanded=False)
+    # with expander2:
+        
+#     maf_flagged_checkbox = st.checkbox('MAF', value=False)
+#     gentrain_flagged_checkbox = st.checkbox('GenTrain', value=False)
+#     all_flagged_checkbox = st.checkbox('All', value=False)
+
+# if maf_flagged_checkbox and not gentrain_flagged_checkbox:
+#     st.header('Flagged SNPs')
+#     view_table_slice(maf_flagged)
+#     all_flagged_checkbox = False
+
+# if gentrain_flagged_checkbox and not maf_flagged_checkbox:
+#     st.header('Flagged SNPs')
+#     view_table_slice(gentrain_flagged)
+#     all_flagged_checkbox = False
+
+# if maf_flagged_checkbox and gentrain_flagged_checkbox:
+#     st.header('Flagged SNPs')
+#     view_table_slice(both_flagged)
+#     all_flagged_checkbox = False
+
+# if all_flagged_checkbox:
+#     st.header('Flagged SNPs')
+#     view_table_slice(total_flagged)
+#     gentrain_flagged_checkbox = False
+#     maf_flagged_checkbox = False
 
 
     
