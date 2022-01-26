@@ -174,8 +174,10 @@ def run():
             recluster_fig = plot_hist_contour(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', xlim=xlim, ylim=ylim)
 
             # left_column, right_column = st.columns([1,1])
+            # with left_column:
             st.header("Default Clusters")
             st.plotly_chart(cluster_fig)
+            # with right_column:
             st.header("DTi Clusters")
             st.plotly_chart(recluster_fig)
             

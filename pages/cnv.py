@@ -37,34 +37,34 @@ def run():
         BIM = st.session_state['BIM']
 
         if BAF_temp.shape[0]>0 and LRR_temp.shape[0]>0 and BIM.shape[0]>0:
-            gene_list = ['SNCA'] ####### REMOVE #########
-            sample_ids = [1029339] ####### REMOVE #########
-            cnv_type = ['cnv']
+            gene_list = ['SNCA','SNCA','SNCA'] ####### REMOVE when we have full data#########
+            sample_ids = [1029339,1056333,1398635] ####### REMOVE when we have full data #########
+            cnv_type = ['Deletion','Duplication','Complex']
             # sample_ids = list(BAF_temp.IID.unique())
- 
+            genes = set(gene_list)
             sample_id = st.sidebar.selectbox('Sample ID', sample_ids)
-            gene_label = st.sidebar.selectbox('Gene', gene_list) 
+            gene_label = st.sidebar.selectbox('Gene', genes) 
             process_report_button = st.sidebar.button("Analyze CNVs")
 
             if process_report_button:
 
                 plot_df = process_cnv_reports(BAF_temp, LRR_temp, BIM, sample_id)
 
-                cnv_table = pd.DataFrame(
-                    {
-                        'sample_id':sample_ids,
-                        'gene':gene_list,
-                        'cnv_type':cnv_type
-                        }
-                    )
-                st.table(cnv_table) 
-
+                # cnv_table = pd.DataFrame(
+                #     {
+                #         'sample_id':sample_ids,
+                #         'gene':gene_list,
+                #         'cnv_type':cnv_type
+                #         }
+                #     )
+                # st.table(cnv_table) 
+                ####### This data comes from reference later on
                 chromosome = 4
                 gene_start = 90645250
                 gene_end = 90759466
                 buffer = 1000000
                 
-                BAF_title = "sample ID " + str(sample_id) + " @ " + gene_label + " on CHR " + str(chromosome) + " +/- " + str(buffer) + " BP."
+                BAF_title = "Regional BAF Distribution"
                 low_X = gene_start - buffer
                 high_X = gene_end + buffer
                 BAF_fig = px.scatter(plot_df, x='BP', y='BAF', color='LRR', title=BAF_title, color_continuous_scale='IceFire')
@@ -90,7 +90,7 @@ def run():
                 BAF_fig.add_annotation(annotation)
                 BAF_fig.update_layout()
 
-                LRR_title = "sample ID " + str(sample_id) + " @ " + gene_label + " on CHR " + str(chromosome) + " +/- " + str(buffer) + " BP."
+                LRR_title = "Regional LRR Distribution"
                 low_X = gene_start - buffer
                 high_X = gene_end + buffer
                 LRR_fig = px.scatter(plot_df, x='BP', y='LRR', color='BAF', title=LRR_title, color_continuous_scale='Twilight')
@@ -121,7 +121,8 @@ def run():
                     'gene':gene_list,
                     'cnv_type':cnv_type}
                     )
-
+                cnv = cnv_table[(cnv_table.sample_id==sample_id) & (cnv_table.gene==gene_label)].reset_index().cnv_type[0]
+                st.header(f'{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB')
                 st.plotly_chart(BAF_fig)
                 st.plotly_chart(LRR_fig)
                 
@@ -132,7 +133,7 @@ def run():
 
                     cnv_csv = csv_convert_df(cnv_table)
                     st.download_button(
-                        label="Flagged Variants",
+                        label="CNVs",
                         data=cnv_csv,
                         file_name='cnvs.csv',
                         mime='text/csv'
