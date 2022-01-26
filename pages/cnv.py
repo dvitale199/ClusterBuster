@@ -122,7 +122,20 @@ def run():
                     'cnv_type':cnv_type}
                     )
                 cnv = cnv_table[(cnv_table.sample_id==sample_id) & (cnv_table.gene==gene_label)].reset_index().cnv_type[0]
-                st.header(f'{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB')
+                
+                
+                
+                st.markdown("""
+                <style>
+                .big-font {
+                    font-size:20px !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+                st.markdown(f'<p class="big-font">{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB</p>', unsafe_allow_html=True)
+                
+                # st.header(f'{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB')
                 st.plotly_chart(BAF_fig)
                 st.plotly_chart(LRR_fig)
                 
