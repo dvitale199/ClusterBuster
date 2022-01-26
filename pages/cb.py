@@ -17,6 +17,7 @@ from clusterbuster import parse_report, view_table_slice, plot_clusters, gtype_g
 
 
 def run():
+    
     st.sidebar.title('DTi Genotype Analysis')
 
     st.sidebar.subheader('Upload GenomeStudio Variant Report')
@@ -218,3 +219,33 @@ def run():
                 file_name='flagged.csv',
                 mime='text/csv'
             )
+
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+
+    st.sidebar.image('img/DTI_logo_white_square-removebg-preview.png')

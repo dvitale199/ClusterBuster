@@ -10,7 +10,7 @@ from clusterbuster import csv_convert_df, process_cnv_reports
 
 
 def run():
-    
+
     st.sidebar.title('DTi Genotype Analysis')
     bim_header = ["CHR","RS","CM","BP","A1","A2"]
     reports_exp = st.sidebar.expander("Upload CNV Reports", expanded=False)
@@ -173,4 +173,38 @@ def run():
                         file_name='LRR_fig.html',
                         mime='text/html'
                     )
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
 
+    st.sidebar.image('img/DTI_logo_white_square-removebg-preview.png')

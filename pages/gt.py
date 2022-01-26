@@ -24,6 +24,7 @@ from clusterbuster import csv_convert_df, process_cnv_reports
 #     fig.write_html("img/manhattan.html")
 
 def run():
+
     st.sidebar.title('DTi Genotype Analysis')
     reports_exp = st.sidebar.expander("Uploads", expanded=False)
     
@@ -64,13 +65,13 @@ def run():
             st.session_state['pre_sample_n'] = 8000
             st.session_state['remaining_n'] = 8000
 
-    qc_csv = csv_convert_df(df_qc)
-    st.sidebar.download_button(
-        label="Download QC report",
-        data=qc_csv,
-        file_name='qc.csv',
-        mime='text/csv'
-        )
+            qc_csv = csv_convert_df(df_qc)
+            st.sidebar.download_button(
+                label="Download QC report",
+                data=qc_csv,
+                file_name='qc.csv',
+                mime='text/csv'
+                )
 
     # if 'selected_metrics' in st.session_state:
         # selected_metrics = st.session_state['selected_metrics']
@@ -285,3 +286,39 @@ def run():
     # state = st.session_state.get(position=0)
     # widget = st.empty()
     # ,on_change=plot_manhattan(df1, )
+
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+    st.sidebar.text(' ')
+
+    st.sidebar.image('img/DTI_logo_white_square-removebg-preview.png')
