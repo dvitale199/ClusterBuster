@@ -1,27 +1,26 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 # import hdfStore
-import tempfile
-import io
+# import tempfile
+# import io
 import deepdish as dd
 import plotly.express as px
 import plotly.graph_objects as go
 from functools import reduce
 import dash_bio as dashbio
-import qmplot
+# import qmplot
 
-from clusterbuster import csv_convert_df, process_cnv_reports
+from clusterbuster import csv_convert_df
+from db_manhattan.manhattan import ManhattanPlot
 
 # def plot_manhattan(df):
-#     fig = dashbio.ManhattanPlot(
-#         dataframe = df
-#     )
-#     # figure.update_layout(showlegend=True,
-#     #     width=1200,
-#     #     height=500)
+#     # fig = dashbio.ManhattanPlot(
+#     #     dataframe = df
+#     # )
 
-#     # st.write(fig)
-#     fig.write_html("img/manhattan.html")
+    
+# #     fig.write_html("img/manhattan.html")
 
 def run():
 
@@ -254,8 +253,31 @@ def run():
                         st.plotly_chart(fig)
         st.text('  ')
         st.header('Preliminary QC GWAS, Largest Ancestry Group')
-        st.image('img/manhattan_plot.png')
-        st.image('img/QQ_plot_resize.png')
+        if 'gwas' in st.session_state:
+            gwas = st.session_state['gwas']
+            # DATASET = gwas.groupby('CHR').apply(lambda u: u.head(50))
+            # DATASET = DATASET.droplevel('CHR').reset_index(drop=True)
+            
+            # plot_manhattan(gwas)
+            fig = ManhattanPlot(
+                dataframe = gwas
+                )
+
+            st.plotly_chart(fig, use_container_width=True)
+
+
+
+
+
+        # st.image('img/manhattan_plot.png')
+        # st.image('img/QQ_plot_resize.png')
+        # components.html('img/manhattan.html')
+        
+        # mh_html = open("img/manhattan.html", 'r', encoding='utf-8')
+        # mh_source = mh_html.read() 
+        # components.html(mh_source, width=600, height=600)
+
+
 
 
 
@@ -275,12 +297,7 @@ def run():
 
 
         #manhattan plot
-    # if 'gwas' in st.session_state:
-    #     gwas = st.session_state['gwas']
-    #     DATASET = gwas.groupby('CHR').apply(lambda u: u.head(50))
-    #     DATASET = DATASET.droplevel('CHR').reset_index(drop=True)
-        
-    #     plot_manhattan(gwas)
+
 
     # threshold = st.slider('Threshold value', min_value = 1, max_value = 10, value =1)
     # state = st.session_state.get(position=0)
