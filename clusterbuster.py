@@ -183,10 +183,21 @@ def plot_clusters(df, x_col, y_col, gtype_col, snpid):
         x=x_col, y=y_col, 
         color=gtype_col, 
         color_discrete_map=cmap, 
-        width=600, height=400)
+        width=750, height=500)
 
     fig.update_xaxes(range=xlim, nticks=10)
     fig.update_yaxes(range=ylim, nticks=10)
+    
+    # fig.update_layout(
+    #     margin=dict(l=0, r=300, t=300, b=0),
+    # )
+    fig.update_layout(legend=dict(
+    orientation="h",
+    yanchor="bottom",
+    y=1,
+    xanchor="right",
+    x=1
+))
 
     out_dict = {
         'fig': fig,
@@ -201,8 +212,6 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
 
     d3 = px.colors.qualitative.D3
 
-
-
     cmap = {
         'AA': d3[0],
         'AB': d3[1],
@@ -213,7 +222,6 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
 
     n_trace = len(df[gtype_col].unique())
 
-
     fig = px.density_contour(
         df,
         x=x_col, y=y_col, 
@@ -221,17 +229,23 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
         marginal_y="histogram",
         color="gtype_out", 
         color_discrete_map=cmap,
-        width=750, height=500
+        range_x=xlim, range_y=ylim,
+        width=938, height=625,
+        labels={"gtype_out": "Gtype"}
         )
 
-
-    fig2 = px.scatter(df, x=x_col, y=y_col, color=gtype_col, color_discrete_map=cmap)
-    fig2.update_xaxes(range=xlim, nticks=10)
-    fig2.update_yaxes(range=ylim, nticks=10)
-   
+    fig2 = px.scatter(df, x=x_col, y=y_col, color=gtype_col, color_discrete_map=cmap, range_x=xlim, range_y=ylim, width=938, height=625)
 
     for i in range(n_trace):
         fig.add_trace(fig2.data[i])
+    
+    fig.update_layout(legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=.75,
+        xanchor="right",
+        x=1
+    ))
 
     return fig
 

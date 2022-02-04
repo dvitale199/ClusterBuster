@@ -1,26 +1,16 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import pandas as pd
-# import hdfStore
-# import tempfile
-# import io
-import deepdish as dd
 import plotly.express as px
 import plotly.graph_objects as go
 from functools import reduce
-import dash_bio as dashbio
-# import qmplot
+# import dash_bio as dashbio
+# import deepdish as dd
 
 from clusterbuster import csv_convert_df
 from db_manhattan.manhattan import ManhattanPlot
 
-# def plot_manhattan(df):
-#     # fig = dashbio.ManhattanPlot(
-#     #     dataframe = df
-#     # )
 
-    
-# #     fig.write_html("img/manhattan.html")
 
 def run():
 
@@ -49,12 +39,6 @@ def run():
 
             gwas = pd.read_csv('https://raw.githubusercontent.com/plotly/dash-bio-docs-files/master/manhattan_data.csv')
 
-            
-            # selected_metrics = st.sidebar.selectbox(label="Prune selection", options=['All Sample Prune', 'Related Prune', 'Variant Prune'])
-            # selected_metrics_1 = st.sidebar.selectbox(label="PCA selection", options=['Reference PCA', 'Projected PCA'])
-            
-            # st.session_state['selected_metrics'] = selected_metrics
-            # st.session_state['selected_metrics_1'] = selected_metrics_1
             st.session_state['df_qc'] = df_qc
             st.session_state['df_ancestry_counts'] = df_ancestry_counts
             st.session_state['df_ancestry_labels'] = df_ancestry_labels
@@ -72,11 +56,10 @@ def run():
                 mime='text/csv'
                 )
 
-    # if 'selected_metrics' in st.session_state:
-        # selected_metrics = st.session_state['selected_metrics']
+
     if 'df_qc' in st.session_state:
         df_qc = st.session_state['df_qc']
-        # if selected_metrics == 'All Sample Prune':
+
         if 'remaining_n' in st.session_state:
 
             #all sample prune
@@ -93,19 +76,13 @@ def run():
                 rem = st.session_state['remaining_n']
                 remaining_list.append(rem)
 
-            # df_2.loc[:,'remaining'] = remaining_list
+
             x = [start_n] + remaining_list
             y = ['pre_QC'] + list(df_2.step)
             funnel_df = pd.DataFrame({'remaining_samples':x,'step':y})
-            # print(df_2.head())
-            # print(remaining_list)
-            # print()
 
             #simple bar chart for callrate_prune and sex_prune
             funnel = px.funnel(funnel_df, x='remaining_samples', y='step')
-            # bar_2 = px.bar(df_2, x='step', y='sum', text='sum',
-            #             hover_data=['step','sum'], 
-            #             labels={'step':'Pruning Step', 'sum':'Count'}, height=500, width=800)
 
             #customize figure
             funnel.update_traces(marker_color='rgb(158,202,225)', marker_line_color='rgb(8,48,107)',
@@ -114,8 +91,6 @@ def run():
             st.plotly_chart(funnel)
 
 
-        # if selected_metrics == 'Related Prune':
-            #related prune
             df_3 = df_qc.query("step == 'related_prune'")
             df_3 = df_3[['ancestry', 'pruned_count', 'metric']]
 
@@ -216,26 +191,9 @@ def run():
                         height=550)
                     st.markdown("**Ancestry Distribution**")
                     st.write(pie_chart)
-
                 
                 
             with left_column:
-                # if 'selected_metrics_1' in st.session_state:
-                #     selected_metrics_1 = st.session_state['selected_metrics_1']
-                #     if 'df_ref_pcs' in st.session_state:
-                #         df_ref_pcs = st.session_state['df_ref_pcs']
-                #         if selected_metrics_1 == 'Reference PCA':
-                #             X = df_ref_pcs[['PC1', 'PC2', 'PC3']]
-
-                #             fig = px.scatter_3d(
-                #                 X, 
-                #                 x='PC1', 
-                #                 y='PC2', 
-                #                 z='PC3',
-                #                 color=df_ref_pcs['label'])
-                            
-                #             st.markdown("**Reference PCA**")
-                #             st.plotly_chart(fig)
                     
                     if 'df_projected_pcs' in st.session_state:
                         df_projected_pcs = st.session_state['df_projected_pcs']
@@ -255,55 +213,18 @@ def run():
         st.header('Preliminary QC GWAS, Largest Ancestry Group')
         if 'gwas' in st.session_state:
             gwas = st.session_state['gwas']
-            # DATASET = gwas.groupby('CHR').apply(lambda u: u.head(50))
-            # DATASET = DATASET.droplevel('CHR').reset_index(drop=True)
-            
-            # plot_manhattan(gwas)
-            fig = ManhattanPlot(
+
+            manhattan_fig = ManhattanPlot(
                 dataframe = gwas
                 )
 
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(manhattan_fig, use_container_width=True)
 
+            st.image('img/QQ_plot_resize.png')
 
-
-
-
-        # st.image('img/manhattan_plot.png')
-        # st.image('img/QQ_plot_resize.png')
-        # components.html('img/manhattan.html')
+            # st.image('img/manhattan_plot.png')
+            # st.image('img/QQ_plot_resize.png')
         
-        # mh_html = open("img/manhattan.html", 'r', encoding='utf-8')
-        # mh_source = mh_html.read() 
-        # components.html(mh_source, width=600, height=600)
-
-
-
-
-
-    # corrected_significance = 5e-8
-    # logistic_plot = logistic.loc[logistic.TEST=='ADD'].copy()
-
-    # logistic_plot.dropna(how="any", axis=0, inplace=True)
-    # ax = qmplot.manhattanplot(data=logistic_plot,
-    #                         figname=f"{geno_path}.manhattan_plot.png",
-    #                         genomewideline=corrected_significance,
-    #                         is_annotate_topsnp=True,
-    #                         suggestiveline=None,
-    #                         hline_kws={"linestyle": "--", "lw": 1.3},
-    #                         title="AMD WGS")
-
-    # ax = qmplot.qqplot(data=logistic_plot["P"], figname=f"{geno_path}_QQ_plot.png")
-
-
-        #manhattan plot
-
-
-    # threshold = st.slider('Threshold value', min_value = 1, max_value = 10, value =1)
-    # state = st.session_state.get(position=0)
-    # widget = st.empty()
-    # ,on_change=plot_manhattan(df1, )
-
     st.sidebar.text(' ')
     st.sidebar.text(' ')
     st.sidebar.text(' ')

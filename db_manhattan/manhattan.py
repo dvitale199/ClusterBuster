@@ -17,12 +17,6 @@ from pandas.api.types import is_numeric_dtype
 import plotly.graph_objects as go
 
 
-
-
-
-
-
-
 ##################################################################################################################
 ## the following was adapted from plotly dashbio github to fix a bug with figure size changing ###################
 ## github link to code: https://github.com/plotly/dash-bio/blob/master/dash_bio/component_factory/_manhattan.py ##
@@ -585,7 +579,7 @@ class _ManhattanPlot():
             layout = go.Layout(
                 title=title,
                 width=700,
-                height=600,
+                height=500,
                 xaxis={
                     'title': self.xlabel if xlabel is None else xlabel,
                     'showgrid': showgrid,
