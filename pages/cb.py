@@ -174,17 +174,23 @@ def run():
             ylim = cluster_plot['ylim']
             recluster_fig = plot_hist_contour(df=gmm_plot_df, x_col='Theta', y_col='R', gtype_col='gtype_out', xlim=xlim, ylim=ylim)
 
-            left_column, right_column = st.columns([.6,1])
+            left_column, right_column = st.columns([.9,1])
             # left_column, right_column = st.columns([1.25,1])
             
             with left_column:
                 st.header("Default Clusters")
 
                 # some padding to fix location of first plot
-                st.title('')
-                st.title('')
-                st.title('')
-                # st.write('')
+                st.write('')
+                # st.title('')
+                # st.title('')
+                st.write('')
+                st.write('')
+                st.write('')
+                st.write('')
+                st.write('')
+                st.write('')
+                st.write('')
                 # st.write('')
                 
                 st.plotly_chart(cluster_fig)

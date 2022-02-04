@@ -183,14 +183,14 @@ def plot_clusters(df, x_col, y_col, gtype_col, snpid):
         x=x_col, y=y_col, 
         color=gtype_col, 
         color_discrete_map=cmap, 
-        width=750, height=500)
+        width=700, height=497)
 
     fig.update_xaxes(range=xlim, nticks=10)
     fig.update_yaxes(range=ylim, nticks=10)
     
-    # fig.update_layout(
-    #     margin=dict(l=0, r=300, t=300, b=0),
-    # )
+    fig.update_layout(
+        margin=dict(l=0, r=76, t=63, b=75),
+    )
     fig.update_layout(legend=dict(
     orientation="h",
     yanchor="bottom",
@@ -198,7 +198,7 @@ def plot_clusters(df, x_col, y_col, gtype_col, snpid):
     xanchor="right",
     x=1
 ))
-
+    fig.update_layout(legend_title_text='')
     out_dict = {
         'fig': fig,
         'xlim': xlim,
@@ -230,9 +230,13 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
         color="gtype_out", 
         color_discrete_map=cmap,
         range_x=xlim, range_y=ylim,
-        width=938, height=625,
-        labels={"gtype_out": "Gtype"}
+        width=938, height=630,
+        labels={"gtype_out": ""}
         )
+
+    # fig.data[0].showlegend = False
+    # fig.data[3].showlegend = False
+    # fig.data[6].showlegend = False
 
     fig2 = px.scatter(df, x=x_col, y=y_col, color=gtype_col, color_discrete_map=cmap, range_x=xlim, range_y=ylim, width=938, height=625)
 
