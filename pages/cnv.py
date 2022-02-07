@@ -88,7 +88,7 @@ def run():
                 }
 
                 BAF_fig.add_annotation(annotation)
-                BAF_fig.update_layout()
+                BAF_fig.update_layout(width=1000, height=500)
 
                 LRR_title = "Regional LRR Distribution"
                 low_X = gene_start - buffer
@@ -114,7 +114,7 @@ def run():
                 }
 
                 LRR_fig.add_annotation(annotation)
-                LRR_fig.update_layout()
+                LRR_fig.update_layout(width=1000, height=500)
                 
                 cnv_table = pd.DataFrame(
                     {'sample_id':sample_ids,
@@ -143,7 +143,6 @@ def run():
                 download_exp = st.sidebar.expander("Download Reports", expanded=False)
                 with download_exp:
                     
-
                     cnv_csv = csv_convert_df(cnv_table)
                     st.download_button(
                         label="CNVs",

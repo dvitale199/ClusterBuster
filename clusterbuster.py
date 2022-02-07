@@ -183,7 +183,7 @@ def plot_clusters(df, x_col, y_col, gtype_col, snpid):
         x=x_col, y=y_col, 
         color=gtype_col, 
         color_discrete_map=cmap, 
-        width=700, height=497)
+        width=650, height=497)
 
     fig.update_xaxes(range=xlim, nticks=10)
     fig.update_yaxes(range=ylim, nticks=10)
@@ -230,7 +230,7 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
         color="gtype_out", 
         color_discrete_map=cmap,
         range_x=xlim, range_y=ylim,
-        width=938, height=630,
+        width=900, height=630,
         labels={"gtype_out": ""}
         )
 

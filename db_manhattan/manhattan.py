@@ -67,7 +67,7 @@ def ManhattanPlot(
         gene="GENE",
         annotation=None,
         logp=True,
-        title="Manhattan Plot",
+        title="",
         showgrid=True,
         xlabel=None,
         ylabel='-log10(p)',
@@ -579,7 +579,7 @@ class _ManhattanPlot():
             layout = go.Layout(
                 title=title,
                 width=700,
-                height=500,
+                height=600,
                 xaxis={
                     'title': self.xlabel if xlabel is None else xlabel,
                     'showgrid': showgrid,
