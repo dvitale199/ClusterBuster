@@ -48,8 +48,29 @@ def run():
 
             if process_report_button:
 
+                cnv_table = pd.DataFrame(
+                    {'sample_id':sample_ids,
+                    'gene':gene_list,
+                    'cnv_type':cnv_type}
+                    )
+                cnv = cnv_table[(cnv_table.sample_id==sample_id) & (cnv_table.gene==gene_label)].reset_index().cnv_type[0]
+                ####### This data comes from reference later on
+                chromosome = 4
+                gene_start = 90645250
+                gene_end = 90759466
+                buffer = 1000000
+
                 plot_df = process_cnv_reports(BAF_temp, LRR_temp, BIM, sample_id)
 
+                st.markdown("""
+                <style>
+                .big-font {
+                    font-size:20px !important;
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+                st.markdown(f'<p class="big-font">{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB</p>', unsafe_allow_html=True)
                 # cnv_table = pd.DataFrame(
                 #     {
                 #         'sample_id':sample_ids,
@@ -58,16 +79,12 @@ def run():
                 #         }
                 #     )
                 # st.table(cnv_table) 
-                ####### This data comes from reference later on
-                chromosome = 4
-                gene_start = 90645250
-                gene_end = 90759466
-                buffer = 1000000
+
                 
-                BAF_title = "Regional BAF Distribution"
+                
                 low_X = gene_start - buffer
                 high_X = gene_end + buffer
-                BAF_fig = px.scatter(plot_df, x='BP', y='BAF', color='LRR', title=BAF_title, color_continuous_scale='IceFire')
+                BAF_fig = px.scatter(plot_df, x='BP', y='BAF', color='LRR', color_continuous_scale='IceFire')
                 BAF_fig.update_xaxes(range=[low_X, high_X])
 
                 BAF_fig.add_shape(type="line",
@@ -88,12 +105,12 @@ def run():
                 }
 
                 BAF_fig.add_annotation(annotation)
-                BAF_fig.update_layout(width=1000, height=500)
+                BAF_fig.update_layout(width=1200, height=450)
 
-                LRR_title = "Regional LRR Distribution"
+                
                 low_X = gene_start - buffer
                 high_X = gene_end + buffer
-                LRR_fig = px.scatter(plot_df, x='BP', y='LRR', color='BAF', title=LRR_title, color_continuous_scale='Twilight')
+                LRR_fig = px.scatter(plot_df, x='BP', y='LRR', color='BAF', color_continuous_scale='Twilight')
                 LRR_fig.update_xaxes(range=[low_X, high_X])
 
                 LRR_fig.add_shape(type="line",
@@ -114,29 +131,22 @@ def run():
                 }
 
                 LRR_fig.add_annotation(annotation)
-                LRR_fig.update_layout(width=1000, height=500)
-                
-                cnv_table = pd.DataFrame(
-                    {'sample_id':sample_ids,
-                    'gene':gene_list,
-                    'cnv_type':cnv_type}
-                    )
-                cnv = cnv_table[(cnv_table.sample_id==sample_id) & (cnv_table.gene==gene_label)].reset_index().cnv_type[0]
+                LRR_fig.update_layout(width=1200, height=450)
                 
                 
-                
-                st.markdown("""
-                <style>
-                .big-font {
-                    font-size:20px !important;
-                }
-                </style>
-                """, unsafe_allow_html=True)
-
-                st.markdown(f'<p class="big-font">{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB</p>', unsafe_allow_html=True)
                 
                 # st.header(f'{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB')
+                st.header("Regional BAF Distribution")
+                baf_exp = st.expander("Info", expanded=False)
+                with baf_exp:
+                    st.write(f"B-Allele Frequency across {gene_label} Locus")
                 st.plotly_chart(BAF_fig)
+
+
+                st.header("Regional LRR Distribution")
+                lrr_exp = st.expander("Info", expanded=False)
+                with lrr_exp:
+                    st.write(f"Log R Ratios across {gene_label} Locus")
                 st.plotly_chart(LRR_fig)
                 
 

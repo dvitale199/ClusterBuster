@@ -179,6 +179,9 @@ def run():
             
             with left_column:
                 st.header("Default Clusters")
+                left_exp = st.expander("Info", expanded=False)
+                with left_exp:
+                    st.write('Genotypes assigned by the Illumina GenomeStudio Algorithm')
 
                 # some padding to fix location of first plot
                 # st.title('')
@@ -194,8 +197,14 @@ def run():
                 # st.write('')
                 
                 st.plotly_chart(cluster_fig)
+
             with right_column:
+        
                 st.header("DTi Clusters")
+                right_exp = st.expander("Info", expanded=False)
+                with right_exp:
+                    st.write('Genotypes assigned by DTi Enhanced Clustering Algorithm')
+
                 st.plotly_chart(recluster_fig)
                 
             table_button = st.button('Show Table')
