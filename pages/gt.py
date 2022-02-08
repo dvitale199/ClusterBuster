@@ -77,6 +77,15 @@ def run():
         remain_samples_x = [start_n] + remaining_list
         steps_y = ['pre_QC'] + list(df_2.step)
         funnel_df = pd.DataFrame({'remaining_samples':remain_samples_x,'step':steps_y})
+        steps_dict = {
+            'pre_QC': 'Pre-QC',
+            'callrate_prune':'Call Rate Prune',
+            'sex_prune': 'Sex Prune',
+            'het_prune': 'Heterozygosity Prune',
+            'related_prune': 'Relatedness Prune'
+            }
+        # funnel_df.loc[:,'step_name'] = funnel_df.replace({"step": steps_dict})
+        funnel_df.loc[:,'step_name'] = funnel_df.loc[:,'step'].map(steps_dict)
 
         df_3 = df_qc.query("step == 'related_prune'")
         df_3 = df_3[['ancestry', 'pruned_count', 'metric']]
@@ -90,6 +99,17 @@ def run():
         df_3_duplicated = df_3_duplicated.drop('metric', 1)
 
         df_4 = pd.merge(df_3_related, df_3_duplicated, on="ancestry")
+        ancestry_dict = {
+            'FIN': 'Finnish (FIN)',
+            'EAS': 'East Asian (EAS)',
+            'AAC': 'African Admixted/Carribbean (AAC)',
+            'AJ': 'Ashkenazi (AJ)',
+            'SAS': 'South Asian (SAS)',
+            'AMR': 'Native American/Latino (AMR)',
+            'EUR': 'European (EUR)'
+        }
+
+        df_4.loc[:,'label'] = df_4.loc[:,'ancestry'].map(ancestry_dict)
         df_4.set_index('ancestry', inplace=True)
 
        
@@ -130,37 +150,37 @@ def run():
         funnel = px.funnel(
             funnel_df, 
             x='remaining_samples', 
-            y='step', 
-            height=600, width=600
+            y='step_name', 
+            height=600, width=550
             )
 
         #customize figure
         funnel.update_traces(
-            marker_color='rgb(158,202,225)', 
-            marker_line_color='rgb(8,48,107)',
             marker_line_width=1.5, 
-            opacity=0.6
+            opacity=0.8
             )
         funnel.update_layout(
         margin=dict(l=0, r=0, t=60, b=80),
+        yaxis_title="QC Step"
     )
-
+            # marker_color='rgb(158,202,225)', 
+            # marker_line_color='rgb(8,48,107)',
         bar_3 = go.Figure(
             data=[
-                go.Bar(y=df_4.index, x=df_4['related_count'], orientation='h', name="Related", base=0),
-                go.Bar(y=df_4.index, x=-df_4['duplicated_count'], orientation='h', name="Duplicated", base=0)
+                go.Bar(y=df_4.label, x=df_4['related_count'], orientation='h', name="Related", base=0),
+                go.Bar(y=df_4.label, x=-df_4['duplicated_count'], orientation='h', name="Duplicated", base=0)
                 ])
 
         bar_3.update_layout(barmode='stack')
 
         bar_3.update_yaxes(
-            ticktext=df_4.index,
-            tickvals=df_4.index
+            ticktext=df_4.label,
+            tickvals=df_4.label
         )
 
         bar_3.update_layout(
             autosize=False,
-            height=600, width=600
+            height=600, width=700
         )
 
         bar_3.update_layout(
@@ -221,53 +241,57 @@ def run():
 
             st.title('**GenoTools Quality Control**')
             
-            st.header('1. Sample Filtering')
-            st.write('\
-                Steps:  \n\
-                    1. Call Rate: Missingness per-individual > 0.02 (--mind 0.02)  \n\
-                    2. Sex: F-coefficient < 0.25 is Female, F-coefficient > 0.75 is Male. 0.25 >= F <= 0.75 are outliers (--sex-check 0.25 0.75)  \n\
-                    3. Heterozygosity: Keep samples with -0.25 < F-coefficient < 0.25 (--het)  \n\
-                    4. Relatedness: Flag Samples with relatedness > 0.125 as cousins or more closely-related, Prune relatedness > 0.95 as Duplicates (GCTA --grm-cutoff 0.125)\
-            ')
+            st.header('QC Step 1: Sample Filtering')
+            sample_exp = st.expander("Description", expanded=False)
+            with sample_exp:
+                st.write('\
+                        1. Call Rate: Missingness per-individual > 0.02  \n\
+                        2. Sex: F-coefficient < 0.25 is Female, F-coefficient > 0.75 is Male. 0.25 >= F <= 0.75 are outliers  \n\
+                        3. Heterozygosity: Keep samples with -0.25 < F-coefficient < 0.25  \n\
+                        4. Relatedness: Flag Samples with relatedness > 0.125 as cousins or more closely-related, Prune relatedness > 0.95 as Duplicates\
+                ')
 
-            left_col1, right_col1 = st.columns([1.25,1])
+            left_col1, right_col1 = st.columns([1,1])
             with left_col1:
-                st.markdown("**All Sample Filtering Counts**")
+                st.header("**All Sample Filtering Counts**")
                 st.plotly_chart(funnel)
 
             with right_col1:
-                st.markdown("**Relatedness per Ancestry**")
+                st.header("**Relatedness per Ancestry**")
                 st.plotly_chart(bar_3)
             st.markdown('---')
 
-            st.header('2. Ancestry Estimation')
-            st.write('\
-                Labels assigned by a model pretrained on PC and UMAP-transformed 1000 Genomes genotypes\
-            ')
+            st.header('QC Step 2: Ancestry Estimation')
+            anc_exp = st.expander("Description", expanded=False)
+            with anc_exp:
+
+                st.write('\
+                    Labels assigned by the DTi ancestry algorithm trained on PC and UMAP-transformed 1000 Genomes genotypes\
+                ')
 
             left_col2, right_col2 = st.columns([1.25,1])
 
             with right_col2:
                 
-                st.markdown("**Ancestry Distribution**")
+                st.header("**Ancestry Distribution**")
                 st.write(pie_chart)
                 
             with left_col2:
-                st.markdown("**Projected PCA**")
+                st.header("**Projected PCA**")
                 st.plotly_chart(pca_scatter)
             st.markdown('---')
 
-            st.header('3. Variant Filtering')
+            st.header('QC Step 3: Variant Filtering')
+            var_exp = st.expander("Description", expanded=False)
+            with var_exp:
+                st.write('\
+                        1. Genotype Missingness <= 0.05  \n\
+                        2. Case/Control Missingness: P > 1e-4  \n\
+                        3. Haplotype Missingness: P > 1e-4  \n\
+                        4. Hardy-Weinberg Equilibrium: P > 1e-4  \n\
+                ')
 
-            st.write('\
-                Steps:  \n\
-                    1. Genotype Missingness <= 0.05 (--geno 0.05)  \n\
-                    2. Case/Control Missingness: P > 1e-4 (--test-missing)  \n\
-                    3. Haplotype Missingness: P > 1e-4 (--test-mishap)  \n\
-                    4. Hardy-Weinberg Equilibrium: P > 1e-4 (--hwe 1E-4)  \n\
-            ')
-
-            st.markdown("**Variant Filtering per Ancestry**")
+            st.header("**Variant Filtering per Ancestry**")
             st.plotly_chart(bar_6)
             st.markdown('---')
 
@@ -280,17 +304,24 @@ def run():
             
 
         st.text('  ')
-        st.header('4. Preliminary QC GWAS, Largest Ancestry Group')
+        st.header('QC Step 4: Preliminary QC GWAS')
         if 'gwas' in st.session_state:
             gwas = st.session_state['gwas']
 
+            gwas_exp = st.expander("Description", expanded=False)
+            with gwas_exp:
+                st.write("Summary statistics generated for largest ancestry group post-QC")
+            
+            st.header("**Manhattan Plot**")
             manhattan_fig = ManhattanPlot(
                 dataframe = gwas
                 )
 
             st.plotly_chart(manhattan_fig, use_container_width=True)
 
-            st.image('img/QQ_plot_resize.png')
+            st.header('**QQ-Plot**')
+            
+            st.image('img/qq_plot_final2.png')
 
         
     st.sidebar.text(' ')

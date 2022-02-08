@@ -137,14 +137,14 @@ def run():
                 
                 # st.header(f'{cnv} at {gene_label} on Chromosome {chromosome} +/- 1 MB')
                 st.header("Regional BAF Distribution")
-                baf_exp = st.expander("Info", expanded=False)
+                baf_exp = st.expander("Description", expanded=False)
                 with baf_exp:
                     st.write(f"B-Allele Frequency across {gene_label} Locus")
                 st.plotly_chart(BAF_fig)
 
 
                 st.header("Regional LRR Distribution")
-                lrr_exp = st.expander("Info", expanded=False)
+                lrr_exp = st.expander("Description", expanded=False)
                 with lrr_exp:
                     st.write(f"Log R Ratios across {gene_label} Locus")
                 st.plotly_chart(LRR_fig)

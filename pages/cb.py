@@ -179,7 +179,7 @@ def run():
             
             with left_column:
                 st.header("Default Clusters")
-                left_exp = st.expander("Info", expanded=False)
+                left_exp = st.expander("Description", expanded=False)
                 with left_exp:
                     st.write('Genotypes assigned by the Illumina GenomeStudio Algorithm')
 
@@ -201,7 +201,7 @@ def run():
             with right_column:
         
                 st.header("DTi Clusters")
-                right_exp = st.expander("Info", expanded=False)
+                right_exp = st.expander("Description", expanded=False)
                 with right_exp:
                     st.write('Genotypes assigned by DTi Enhanced Clustering Algorithm')
 
