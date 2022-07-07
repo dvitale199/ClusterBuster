@@ -1,5 +1,6 @@
 # imports
 import pandas as pd
+from pandas.api.types import is_numeric_dtype
 import numpy as np
 from sklearn.mixture import GaussianMixture
 import streamlit as st
@@ -7,14 +8,16 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
-
 # from __future__ import absolute_import
 
-import numpy as np
-import pandas as pd
-from pandas.api.types import is_numeric_dtype
-
-import plotly.graph_objects as go
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.model_selection import KFold
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import GridSearchCV
+from sklearn.metrics import balanced_accuracy_score
 
 
 def calculate_maf(gtype_df):
@@ -219,7 +222,7 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
         'BB': d3[2],
         'NC': d3[3]
     }
-
+    
     n_trace = len(df[gtype_col].unique())
 
     fig = px.density_contour(
@@ -227,16 +230,12 @@ def plot_hist_contour(df, x_col, y_col, gtype_col, xlim, ylim):
         x=x_col, y=y_col, 
         marginal_x="histogram", 
         marginal_y="histogram",
-        color="gtype_out", 
+        color=gtype_col, 
         color_discrete_map=cmap,
         range_x=xlim, range_y=ylim,
         width=900, height=630,
-        labels={"gtype_out": ""}
+        labels={gtype_col: ""}
         )
-
-    # fig.data[0].showlegend = False
-    # fig.data[3].showlegend = False
-    # fig.data[6].showlegend = False
 
     fig2 = px.scatter(df, x=x_col, y=y_col, color=gtype_col, color_discrete_map=cmap, range_x=xlim, range_y=ylim, width=938, height=625)
 
@@ -284,79 +283,89 @@ def csv_convert_df(df):
     return df.to_csv().encode('utf-8')
 
 
+def prep_theta_r_df(df, snpid):
+  # Let's treat this as a simple regression problem
+  df_ = df.loc[df.GType!='NC']
+  pred_df = df.loc[df.GType=='NC']
+  X_pred = pred_df.loc[:,['Theta','R']]
+
+  X, y_ = df_.loc[:, ['Theta','R']], df_.loc[:,['GType']]
+
+  le = LabelEncoder()
+  y = le.fit_transform(y_.GType)
+
+  X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, stratify=y, random_state=123)
+  
+  out_dict = {
+      'snpid': snpid,
+      'X_train': X_train,
+      'X_test': X_test,
+      'y_train': y_train,
+      'y_test': y_test,
+      'X_pred': X_pred,
+      'pred_df': pred_df,
+      'labelencoder':le
+  }
+  
+  return out_dict
+
+    
+def fit_snp_clf(X_train, X_test, y_train, y_test, snpid):
+
+  clf = RandomForestClassifier()
+
+  regressor = clf.fit(X_train, y_train)
+  pred = regressor.predict(X_test)
+  acc = balanced_accuracy_score(y_test,pred)
+  
+  out_dict = {
+      'snpid':snpid,
+      'regressor': regressor,
+      'accuracy': acc
+      }
+
+  return out_dict
 
 
+def predict_genotype_prob(X_pred, regressor, snpid, prob_cutoff=0.75):
+    
+  y_pred = regressor.predict_proba(X_pred) 
+  
+  out_dict = {
+      'snp':snpid,
+      'y_pred': y_pred
+      }
+  
+  return out_dict
 
 
+def cb_recluster_variant(df, snpid, min_prob=0.75):
 
+  cb_data = prep_theta_r_df(df, snpid=snpid)
+  X_train, X_test, y_train, y_test, X_pred = cb_data['X_train'], cb_data['X_test'], cb_data['y_train'], cb_data['y_test'], cb_data['X_pred']
 
+  X_pred = X_pred.loc[~(X_pred['Theta'].isna() | X_pred['R'].isna())]
+  
+  gtype_clf = fit_snp_clf(X_train, X_test, y_train, y_test, snpid=snpid)
+  regressor = gtype_clf['regressor']
+  clf_acc = gtype_clf['accuracy']
 
+  pred_gtype = predict_genotype_prob(X_pred=X_pred, regressor=regressor, snpid=snpid, prob_cutoff=0.75)
+ 
+  pred_labels = [i.argmax() for i in pred_gtype['y_pred']]
+  max_probs = [probs.max() for probs in pred_gtype['y_pred']]  
+  out_gts = cb_data['labelencoder'].inverse_transform(pred_labels)
 
-
-# def cluster_buster_plot(df_cluster, df_recluster, x_col, y_col, gtype_col, snpid):
-
-#     d3 = px.colors.qualitative.D3
-
-#     cmap = {
-#         'AA': d3[0],
-#         'AB': d3[1],
-#         'BA': d3[1],
-#         'BB': d3[2],
-#         'NC': d3[3]
-#     }
-
-#     # gtypes_list = (df[gtype_col].unique())
-#     xmin, xmax = df[x_col].min(), df[x_col].max()
-#     ymin, ymax = df[y_col].min(), df[y_col].max()
-
-#     xlim = [xmin-.1, xmax+.1]
-#     ylim = [ymin-.1, ymax+.1]
-
-#     fig1 = px.scatter(
-#         df_cluster, 
-#         x=x_col, y=y_col, 
-#         color=gtype_col, 
-#         color_discrete_map=cmap, 
-#         width=600, height=400)
-
-    # fig1.update_xaxes(range=xlim)
-    # fig1.update_yaxes(range=ylim)
-
-
-# def plot_gmm(df, x_col, y_col, gtype_col, gmm, snpid, n_std=3):
-
-#     d3 = px.colors.qualitative.D3
-
-#     cmap = {
-#         'AA': d3[0],
-#         'AB': d3[1],
-#         'BA': d3[1],
-#         'BB': d3[2],
-#         'NC': d3[3]
-#     }
-
-#     gtypes_list = (df[gtype_col].unique())
-
-#     fig = go.Figure()
-
-#     for gtype in gtypes_list:
-#         df_ = df.loc[df[gtype_col]==gtype]
-#         x = df_.loc[:,x_col]
-#         y = df_.loc[:,y_col]
-#         color = cmap[gtype]
-#         fig.add_trace(
-#             go.Scatter(
-#                 x=x, y=y, 
-#                 mode="markers",
-#                 name=gtype,
-#                 marker = {'color':color},
-#                 hovertemplate="Genotype=%s<br>Theta=%%{x}<br>R=%%{y}<extra></extra>"% gtype
-#                 ))
-
-#         fig.update_layout(title_text=f'{snpid} Cluster Plot')
-#         fig.update_layout(legend_title_text = 'Genotype')
-#         fig.update_xaxes(title_text=x_col)
-#         fig.update_yaxes(title_text=y_col, tickangle=-90)
+  pred_df = cb_data['pred_df'].copy()
+  print(out_gts)
+  print(pred_df)
+  pred_df.loc[:,'new_gt'] = out_gts
+  pred_df.loc[:,'new_gt_label'] = pred_labels
+  pred_df.loc[:, 'max_prob'] = max_probs
+  pred_df.loc[:, 'reclustered'] = np.where(pred_df.max_prob >= min_prob, True, False)
+  pred_df.loc[:, 'clf_accuracy'] = clf_acc
+  
+  return pred_df
 
         
 #         for n_std in range(1, n_std):
