@@ -357,8 +357,6 @@ def cb_recluster_variant(df, snpid, min_prob=0.75):
   out_gts = cb_data['labelencoder'].inverse_transform(pred_labels)
 
   pred_df = cb_data['pred_df'].copy()
-  print(out_gts)
-  print(pred_df)
   pred_df.loc[:,'new_gt'] = out_gts
   pred_df.loc[:,'new_gt_label'] = pred_labels
   pred_df.loc[:, 'max_prob'] = max_probs
