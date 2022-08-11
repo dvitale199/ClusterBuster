@@ -47,18 +47,8 @@ def run():
 
         if process_report_button:
             report_in = pd.read_csv(snp_metrics, engine='c', dtype={'chromosome':str, 'position':int})
-            report_tmp = snp_metrics.loc[:,['Sample_ID','snpID','GType']]
-
-            gtypes_map = {
-              'AA': 0,
-              'AB': 1,
-              'BA': 1,
-              'BB': 2,
-              'NC': np.nan
-              }
-
-            gtypes = report_tmp.pivot(index='snpID', columns='Sample_ID', values='GType').replace(gtypes_map)
             report = parse_report(report_in, flag_maf=maf_threshold, flag_gentrain=gentrain_threshold)
+            
 
             if report not in st.session_state:
                 st.session_state['report'] = report
@@ -74,6 +64,14 @@ def run():
                 time.sleep(2)
 
             st.sidebar.success('SNPs of interest have been flagged for low maf and gentrain')
+
+    if 'report' in st.session_state.keys():
+        
+        report = st.session_state['report']
+        cb_df = report
+        snps_df = report['flagged_snps']
+        snps_list = list(report.snpID.unique())
+
 
 
 
@@ -99,8 +97,6 @@ def run():
 #         #### add check to see if anything in the input list is not in snp data
 #         else:
 #             input_snp_list = None
-
-        
 
 #     if reportfile:
 #         threshold_expander = st.sidebar.expander("Genotype Quality Control Thresholds (Advanced)", expanded=False)
