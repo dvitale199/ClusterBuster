@@ -70,7 +70,7 @@ def clusterbuster_munge(metrics_file_path, out_path):
   snp_metrics.loc[:,'GT'] = snp_metrics.loc[:,'GT'].fillna('NC')
 
   # drop snps where gentrain score
-  snp_metrics = snp_metrics.loc[~snp_metrics['GenTrain_Score'].isna()]
+  snp_metrics = snp_metrics.loc[(~snp_metrics['GenTrain_Score'].isna()) & (~snp_metrics['Theta'].isna()) & (~snp_metrics['R'].isna())]
 
   snp_metrics.loc[snp_metrics['ALLELE_A']==0, 'a1'] = snp_metrics.loc[snp_metrics['ALLELE_A']==0,'Ref']
   snp_metrics.loc[snp_metrics['ALLELE_A']==1, 'a1'] = snp_metrics.loc[snp_metrics['ALLELE_A']==1,'Alt1']
@@ -168,7 +168,7 @@ def munge_train_test(df, test_size=0.2, random_state=123):
 def fit_gt_clf(X_train, y_train, clf=RandomForestClassifier(), param_grid={'criterion':['gini', 'entropy']}, cv=5):
 
   print(f'training model')
-  cv_ = GridSearchCV(estimator=clf, param_grid=param_grid, cv=5)
+  cv_ = GridSearchCV(estimator=clf, param_grid=param_grid, cv=cv)
   cv_.fit(X_train, y_train)
 
   return cv_
@@ -188,16 +188,17 @@ def test_gt_clf(X_test, y_test, clf):
 
 
 def recluster_gts(df, clf, label_encoder, min_prob=0.8):
-
+  df = df.copy()
   X_pred = df.loc[:,['Theta','R']]
   y_pred = clf.predict_proba(X_pred)
-
+  y_pred_list = [l.tolist() for l in y_pred]
   pred_labels = [i.argmax() for i in y_pred]
   max_probs = [probs.max() for probs in y_pred]  
   out_gts = label_encoder.inverse_transform(pred_labels)
 
   df.loc[:,'new_gt'] = out_gts
   df.loc[:,'new_gt_label'] = pred_labels
+  df.loc[:,'probs'] = y_pred_list
   df.loc[:, 'max_prob'] = max_probs
   df.loc[:, 'reclustered'] = np.where(df.max_prob >= min_prob, True, False)
 
