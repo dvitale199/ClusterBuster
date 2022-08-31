@@ -28,7 +28,6 @@ from sklearn.model_selection import KFold
 # from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.metrics import balanced_accuracy_score, accuracy_score
-from imblearn.under_sampling import RandomUnderSampler
 
 
 
@@ -69,7 +68,7 @@ def clusterbuster_munge(metrics_file_path, out_path):
   snp_metrics.loc[(snp_metrics['GType']=='NC'), 'GT'] = 'NC'
   snp_metrics.loc[:,'GT'] = snp_metrics.loc[:,'GT'].fillna('NC')
 
-  # drop snps where gentrain score
+  # drop snps where gentrain score, theta, and r isna
   snp_metrics = snp_metrics.loc[(~snp_metrics['GenTrain_Score'].isna()) & (~snp_metrics['Theta'].isna()) & (~snp_metrics['R'].isna())]
 
   snp_metrics.loc[snp_metrics['ALLELE_A']==0, 'a1'] = snp_metrics.loc[snp_metrics['ALLELE_A']==0,'Ref']
@@ -167,7 +166,6 @@ def munge_train_test(df, test_size=0.2, random_state=123):
 
 def fit_gt_clf(X_train, y_train, clf=RandomForestClassifier(), param_grid={'criterion':['gini', 'entropy']}, cv=5):
 
-  print(f'training model')
   cv_ = GridSearchCV(estimator=clf, param_grid=param_grid, cv=cv)
   cv_.fit(X_train, y_train)
 
@@ -175,7 +173,7 @@ def fit_gt_clf(X_train, y_train, clf=RandomForestClassifier(), param_grid={'crit
 
 
 def test_gt_clf(X_test, y_test, clf):
-  print(f'testing model')
+
   pred = clf.predict(X_test)
   acc = accuracy_score(y_test, pred)
 
@@ -187,7 +185,7 @@ def test_gt_clf(X_test, y_test, clf):
   return out_dict
 
 
-def recluster_gts(df, clf, label_encoder, min_prob=0.8):
+def predict_gts(df, clf, label_encoder, min_prob=0.8):
   df = df.copy()
   X_pred = df.loc[:,['Theta','R']]
   y_pred = clf.predict_proba(X_pred)
@@ -200,9 +198,137 @@ def recluster_gts(df, clf, label_encoder, min_prob=0.8):
   df.loc[:,'new_gt_label'] = pred_labels
   df.loc[:,'probs'] = y_pred_list
   df.loc[:, 'max_prob'] = max_probs
-  df.loc[:, 'reclustered'] = np.where(df.max_prob >= min_prob, True, False)
+  df.loc[:, 'reclustered'] = np.where(((df['max_prob'] >= min_prob) & (df['R'] > 0.2)), True, False)
+  df.loc[:,'gt_out'] = np.where(df['reclustered']==True, df['new_gt'], df['GT'])
 
   return df
+
+
+def gt_classify(df, min_gentrain=0.8, min_prob=0.8, train_n=250):
+
+  '''
+  train_n: number of snps per GT (AA, AB, BB) for baseline models to use for no-call snps
+  '''
+
+  df = df.loc[(~df['GenTrain_Score'].isna()) & (~df['Theta'].isna()) & (~df['R'].isna())].copy()
+
+  recluster_snps = list(df.loc[df['GT']=='NC','snpID'].unique())
+
+  # eventually move this outside of this function... causing issue with random sampling
+  train_snps = df.loc[(df['GenTrain_Score']>=min_gentrain) & (df['GT']!='NC')].copy()
+  total_recluster_df = pd.DataFrame()
+
+  # train baseline models: one for autosomes + X and one for Y and M
+  baseline_le = LabelEncoder()
+  baseline_le_alt = LabelEncoder()
+  # baseline_train = training_random_sample(train_snps, chrom=chrom, n=250)
+  
+  aa_sample = df.loc[df.GT=='AA'].sample(n=train_n)
+  ab_sample = df.loc[df.GT=='AB'].sample(n=train_n)
+  bb_sample = df.loc[df.GT=='BB'].sample(n=train_n)
+
+  baseline_train = pd.concat([aa_sample, ab_sample, bb_sample], ignore_index=True)
+
+  # create alternate training set (AA and BB gts ONLY) and transform labels
+  baseline_train_alt = baseline_train.loc[baseline_train['chromosome'].isin(['Y','M'])]
+  baseline_train_alt.loc[:, 'GT_label'] = baseline_le_alt.fit_transform(baseline_train_alt.loc[:, 'GT'])
+
+  # transform labels for main training set (AA, AB, BB)
+  baseline_train.loc[:, 'GT_label'] = baseline_le.fit_transform(baseline_train.loc[:, 'GT'])
+  
+  # train one model across all gts on all chroms
+  baseline_train_test = munge_train_test(baseline_train, test_size=0.2, random_state=123)
+  baseline_clf = fit_gt_clf(X_train=baseline_train_test['X_train'], y_train=baseline_train_test['y_train'])
+  baseline_clf_test = test_gt_clf(X_test=baseline_train_test['X_test'], y_test=baseline_train_test['y_test'], clf=baseline_clf)
+
+  # train a second model for just chrY/M
+  baseline_alt_train_test = munge_train_test(baseline_train_alt, test_size=0.2, random_state=123)
+  baseline_alt_clf = fit_gt_clf(X_train=baseline_alt_train_test['X_train'], y_train=baseline_alt_train_test['y_train'])
+  baseline_alt_clf_test = test_gt_clf(X_test=baseline_alt_train_test['X_test'], y_test=baseline_alt_train_test['y_test'], clf=baseline_alt_clf)
+
+  for selected_snp in recluster_snps:
+
+    cb_metrics = df.loc[df.snpID==selected_snp]
+    chrom = str(cb_metrics.chromosome.unique()[0])
+    
+    # use different possible gts for autosomes + X vs M and Y
+    if chrom in [str(i) for i in range(1,23)] + ['X']:
+      gts = ['AA','AB','BB']
+    if chrom in ['Y','M']:
+      gts = ['AA','BB']
+
+    # random oversample missing- CREATE FUNCTION FROM THIS
+    cb_metrics_called = cb_metrics.loc[cb_metrics['GT'] != 'NC']
+    gt_unique = list(cb_metrics_called['GT'].unique())
+
+    gt_counts = cb_metrics_called['GT'].value_counts(sort=True)
+    gt_count_max = gt_counts.max()
+    gt_counts_df = pd.DataFrame({'GT': list(gt_counts.index),
+                                'count': list(gt_counts)})
+
+    missing_gts = [gt for gt in gts if gt not in gt_unique]
+    missing_gt_counts_df = pd.DataFrame({'GT': missing_gts, 'count':[0]*len(missing_gts)})
+
+    gt_counts_df = pd.concat([gt_counts_df, missing_gt_counts_df])
+    gt_counts_df.loc[:, 'new_needed'] = gt_count_max - gt_counts_df.loc[:, 'count']
+
+    sup_snps = pd.DataFrame()
+
+    # if we have representation of all 3 GTs, just use those for training
+    # on hold for now--- going to balance classes first and see performance
+    # if len(gt_counts) == 3:
+    #   cb_metrics_final = cb_metrics
+
+    if (len(gt_counts) > 0) & (len(gt_counts) <= 3):
+      for gt in gts:
+
+        # eventually move random sample outside of this to be able to run with smaller number of recluster snps
+        n_sample = int(gt_counts_df.loc[gt_counts_df['GT']==gt,'new_needed'].iloc[0]) + 1
+        sup_tmp = train_snps.loc[train_snps['GT']==gt].sample(n_sample)
+        sup_snps = pd.concat([sup_snps, sup_tmp], ignore_index=True)
+
+      cb_metrics_final = pd.concat([cb_metrics, sup_snps])
+
+
+      training_snps_total = cb_metrics_final.loc[cb_metrics_final['GT']!='NC'].copy()
+
+      # create labels
+      le = LabelEncoder()
+      training_snps_total.loc[:, 'GT_label'] = le.fit_transform(training_snps_total.loc[:, 'GT'])
+
+      # train model for snp
+      train_test_split = munge_train_test(training_snps_total, test_size=0.2, random_state=123)
+      clf = fit_gt_clf(X_train=train_test_split['X_train'], y_train=train_test_split['y_train'])
+      clf_test = test_gt_clf(X_test=train_test_split['X_test'], y_test=train_test_split['y_test'], clf=clf)
+
+      # predict NCs
+      pred_df = cb_metrics_final.loc[cb_metrics_final['GT']=='NC'].copy()
+      recluster_snp_df = predict_gts(df=pred_df, clf=clf, label_encoder=le, min_prob=min_prob)
+
+    else:
+      pred_df = cb_metrics.loc[cb_metrics['GT']=='NC']
+
+      if chrom in [str(i) for i in range(1,23)] + ['X']:
+        # recluster no calls in autosomes and X chrom
+        recluster_snp_df = predict_gts(df=pred_df, clf=baseline_clf, label_encoder=baseline_le, min_prob=min_prob)
+      
+      if chrom in ['Y', 'X']:
+        # recluster no calls in Y and M chroms
+        reclustered_snp_df = predict_gts(pred_df, clf=baseline_alt_clf, label_encoder=baseline_le_alt, min_prob=min_prob)
+
+    # else:
+    #   for gt in gts:
+    #     n_sample = len(cb_metrics.Sample_ID.unique())
+    #     sup_tmp = train_snps.loc[train_snps['GT']==gt].sample(n_sample)
+    #     sup_snps = pd.concat([sup_snps, sup_tmp], ignore_index=True)
+
+    #   cb_metrics_final = pd.concat([cb_metrics, sup_snps])
+
+    total_recluster_df = pd.concat([total_recluster_df, recluster_snp_df])
+
+  return total_recluster_df
+
+
 
 
 def view_table_slice(df_in, max_rows=20, **st_dataframe_kwargs):
